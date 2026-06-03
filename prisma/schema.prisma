@@ -1,0 +1,285 @@
+// Bolão Copa do Mundo FIFA 2026 — Schema Prisma
+// Banco: PostgreSQL (Neon/Supabase). Gerar client com `npx prisma generate`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── AUTH (Auth.js v5) ───────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  name         String?
+  email        String        @unique
+  emailVerified DateTime?
+  passwordHash String? // null para login social
+  image        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  memberships  Membership[]
+  bets         Bet[]
+  championBets ChampionBet[]
+  feedEvents   FeedEvent[]
+  ownedPools   Pool[]        @relation("PoolOwner")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────── BOLÃO ───────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BetsVisibility {
+  HIDDEN     // nunca mostra palpites alheios
+  OPEN       // mostra sempre
+  AFTER_LOCK // mostra só após o travamento (padrão recomendado)
+}
+
+model Pool {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique // ex: JOGAJUNTO -> /b/JOGAJUNTO
+  description    String?
+  stakeAmount    Decimal        @default(0) @db.Decimal(10, 2)
+  currency       String         @default("BRL")
+  entryDeadline  DateTime?
+  betsVisibility BetsVisibility @default(AFTER_LOCK)
+  tournamentId   String
+  ownerId        String
+
+  tournament  Tournament    @relation(fields: [tournamentId], references: [id])
+  owner       User          @relation("PoolOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  scoringRule ScoringRule?
+  prizeTiers  PrizeTier[]
+  bets        Bet[]
+  championBets ChampionBet[]
+  invites     Invite[]
+  feedEvents  FeedEvent[]
+  createdAt   DateTime      @default(now())
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  userId      String
+  poolId      String
+  role        Role     @default(MEMBER)
+  paid        Boolean  @default(false)
+  totalPoints Int      @default(0) // denormalizado p/ ranking rápido
+  joinedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, poolId])
+  @@index([poolId, totalPoints(sort: Desc)]) // ranking
+}
+
+model ScoringRule {
+  id                  String @id @default(cuid())
+  poolId              String @unique
+  pointsExactScore    Int    @default(1) // bônus por placar exato (somado a result)
+  pointsCorrectResult Int    @default(3) // acertou vencedor
+  pointsCorrectDraw   Int    @default(2) // acertou empate
+  championBonus       Int    @default(5)
+  runnerUpBonus       Int    @default(3)
+  topScorerBonus      Int    @default(5)
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+}
+
+model PrizeTier {
+  id         String  @id @default(cuid())
+  poolId     String
+  position   Int // 1, 2, 3...
+  percentage Decimal @db.Decimal(5, 2) // soma deve validar 100 (regra de aplicação)
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@unique([poolId, position])
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  poolId    String
+  code      String    @unique
+  maxUses   Int?
+  uses      Int       @default(0)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────── TORNEIO / JOGOS ───────────────────────────
+
+enum MatchStage {
+  GROUP
+  R32
+  R16
+  QF
+  SF
+  THIRD_PLACE
+  FINAL
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+}
+
+model Tournament {
+  id        String   @id @default(cuid())
+  name      String // "Copa do Mundo FIFA 2026"
+  externalId String?  @unique
+  season    String
+  pools     Pool[]
+  teams     Team[]
+  matches   Match[]
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id           String  @id @default(cuid())
+  tournamentId String
+  externalId   String?
+  name         String
+  countryCode  String // ISO -> bandeira via flag-icons
+  crestUrl     String? // escudo/bandeira do provedor
+  group        String?
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  homeMatches Match[]   @relation("HomeTeam")
+  awayMatches Match[]   @relation("AwayTeam")
+
+  @@unique([tournamentId, externalId])
+}
+
+model Match {
+  id           String      @id @default(cuid())
+  externalId   String      @unique
+  tournamentId String
+  homeTeamId   String
+  awayTeamId   String
+  homeScore    Int?
+  awayScore    Int?
+  stage        MatchStage  @default(GROUP)
+  group        String?
+  venue        String?
+  kickoffAt    DateTime
+  lockAt       DateTime // kickoff - 20min (calculado na escrita)
+  status       MatchStatus @default(SCHEDULED)
+  scored       Boolean     @default(false) // idempotência do scoring
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  homeTeam   Team       @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam   Team       @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  bets       Bet[]
+
+  @@index([kickoffAt])
+  @@index([status])
+  @@index([lockAt])
+}
+
+model Bet {
+  id           String   @id @default(cuid())
+  userId       String
+  poolId       String
+  matchId      String
+  homeGuess    Int
+  awayGuess    Int
+  pointsEarned Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool  Pool  @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, poolId, matchId]) // um palpite por jogo/bolão/usuário
+  @@index([poolId, matchId])
+}
+
+model ChampionBet {
+  id              String  @id @default(cuid())
+  userId          String
+  poolId          String
+  champTeamId     String?
+  runnerUpTeamId  String?
+  topScorerName   String?
+  pointsEarned    Int     @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, poolId])
+}
+
+// ─────────────────────────── FEED ───────────────────────────
+
+enum FeedType {
+  BET_SCORED
+  NEW_LEADER
+  JOINED
+  POOL_CREATED
+}
+
+model FeedEvent {
+  id        String   @id @default(cuid())
+  poolId    String
+  type      FeedType
+  userId    String?
+  payload   Json
+  createdAt DateTime @default(now())
+
+  pool Pool  @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([poolId, createdAt(sort: Desc)])
+}

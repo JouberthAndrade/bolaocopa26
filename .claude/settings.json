@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npx prisma *)",
+      "Bash(npx next *)"
+    ]
+  }
+}
