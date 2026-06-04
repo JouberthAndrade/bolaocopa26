@@ -12,7 +12,7 @@ const envSchema = z.object({
   FOOTBALL_DATA_TOKEN: z.string().min(1),
   FOOTBALL_DATA_COMPETITION_ID: z.string().default("2000"),
   CRON_SECRET: z.string().min(1),
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z.string().url(),
   // A Copa começa em 12/06/2026; o polling só faz sentido a partir do dia 11.
   // Antes disso o cron retorna cedo, sem gastar quota da API de futebol.
   POLLING_START: z
@@ -30,7 +30,11 @@ export const env = envSchema.parse({
   FOOTBALL_DATA_TOKEN: process.env.FOOTBALL_DATA_TOKEN,
   FOOTBALL_DATA_COMPETITION_ID: process.env.FOOTBALL_DATA_COMPETITION_ID,
   CRON_SECRET: process.env.CRON_SECRET,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_APP_URL:
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000"),
   POLLING_START: process.env.POLLING_START,
 });
 
