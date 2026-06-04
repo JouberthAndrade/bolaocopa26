@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm -v)",
       "Bash(npx prisma *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "PowerShell(npm run typecheck 2>&1)"
     ]
   }
 }

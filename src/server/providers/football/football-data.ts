@@ -1,6 +1,7 @@
 import type { MatchStage, MatchStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { fifaToFlagCdn } from "@/lib/country-codes";
+import { normalizeGroup } from "@/lib/group";
 import type { FootballProvider, ProviderMatch, ProviderTeam } from "./types";
 
 const BASE_URL = "https://api.football-data.org/v4";
@@ -116,7 +117,8 @@ export class FootballDataProvider implements FootballProvider {
         homeScore: m.score.fullTime.home,
         awayScore: m.score.fullTime.away,
         stage: mapStage(m.stage),
-        group: m.group,
+        // Limpa o prefixo "GROUP_" já na origem → o banco grava "A", "B", …
+        group: m.group ? normalizeGroup(m.group) : null,
         venue: m.venue ?? null,
         kickoffAt: new Date(m.utcDate),
         status: mapStatus(m.status),

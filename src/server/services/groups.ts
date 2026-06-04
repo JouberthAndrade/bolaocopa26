@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { normalizeGroup } from "@/lib/group";
 
 export async function getGroups() {
   const teams = await db.team.findMany({
@@ -9,12 +10,14 @@ export async function getGroups() {
 
   const groupMap = new Map<string, typeof teams>();
   for (const t of teams) {
-    const g = t.group!;
+    const g = normalizeGroup(t.group!);
     if (!groupMap.has(g)) groupMap.set(g, []);
     groupMap.get(g)!.push(t);
   }
 
-  return [...groupMap.entries()].map(([letter, teams]) => ({ letter, teams }));
+  return [...groupMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([letter, teams]) => ({ letter, teams }));
 }
 
 /**
@@ -59,23 +62,25 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
 
   const matchesByGroup = new Map<string, typeof mapped>();
   for (const m of mapped) {
-    const g = m.group!;
+    const g = normalizeGroup(m.group!);
     if (!matchesByGroup.has(g)) matchesByGroup.set(g, []);
     matchesByGroup.get(g)!.push(m);
   }
 
   const teamsByGroup = new Map<string, typeof teams>();
   for (const t of teams) {
-    const g = t.group!;
+    const g = normalizeGroup(t.group!);
     if (!teamsByGroup.has(g)) teamsByGroup.set(g, []);
     teamsByGroup.get(g)!.push(t);
   }
 
-  return [...teamsByGroup.entries()].map(([letter, groupTeams]) => ({
-    letter,
-    teams: groupTeams,
-    matches: matchesByGroup.get(letter) ?? [],
-  }));
+  return [...teamsByGroup.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([letter, groupTeams]) => ({
+      letter,
+      teams: groupTeams,
+      matches: matchesByGroup.get(letter) ?? [],
+    }));
 }
 
 export async function getGroupMatches(tournamentId?: string) {

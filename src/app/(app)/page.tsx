@@ -1,44 +1,19 @@
 import Link from "next/link";
+import { ListChecks } from "lucide-react";
 import { requireUserId } from "@/server/guards";
 import {
   getUserPools,
-  getMatchesWithBets,
-  getUpcomingMatchesWithBets,
+  getAllMatchesWithBets,
   getTournamentTeams,
 } from "@/server/services/matches";
 import { getBonusStatus } from "@/server/services/bonus";
-import { MatchCard } from "@/components/match/match-card";
+import { GroupMatchesAccordion } from "@/components/match/group-matches-accordion";
 import { PendingBonus } from "@/components/bonus/pending-bonus";
 import { PoolSelector } from "@/components/pool/pool-selector";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { STAGE_LABEL } from "@/lib/labels";
-import type { MatchWithBet } from "@/server/services/matches";
-import type { MatchStage } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-
-function dayRange(date = new Date()) {
-  const from = new Date(date);
-  from.setHours(0, 0, 0, 0);
-  const to = new Date(date);
-  to.setHours(23, 59, 59, 999);
-  return { from, to };
-}
-
-/** Agrupa os jogos por fase + data. */
-function groupMatches(matches: MatchWithBet[]) {
-  const groups = new Map<string, { stage: MatchStage; group: string | null; date: string; matches: MatchWithBet[] }>();
-  for (const m of matches) {
-    const date = new Date(m.kickoffAt).toLocaleDateString("pt-BR", {
-      weekday: "long", day: "2-digit", month: "long",
-    });
-    const key = `${m.stage}|${m.group ?? ""}|${date}`;
-    if (!groups.has(key)) groups.set(key, { stage: m.stage, group: m.group, date, matches: [] });
-    groups.get(key)!.matches.push(m);
-  }
-  return [...groups.values()];
-}
 
 export default async function HomePage({
   searchParams,
@@ -70,30 +45,23 @@ export default async function HomePage({
   }
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
-  const { from, to } = dayRange();
 
-  const [bonusStatus, teams] = await Promise.all([
+  const [bonusStatus, teams, matches] = await Promise.all([
     getBonusStatus({ userId, poolId: selected.id }),
     getTournamentTeams(),
+    getAllMatchesWithBets({ userId, poolId: selected.id }),
   ]);
 
-  const todayMatches = await getMatchesWithBets({ userId, poolId: selected.id, from, to });
-  const matches =
-    todayMatches.length > 0
-      ? todayMatches
-      : await getUpcomingMatchesWithBets({ userId, poolId: selected.id, take: 16 });
-
-  const isToday = todayMatches.length > 0;
-  const grouped = groupMatches(matches);
+  // Resumo de palpites dos jogos: já palpitados / total disponível.
+  const totalMatches = matches.length;
+  const betCount = matches.filter((m) => m.bet).length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">
-            {isToday ? "Jogos de hoje" : "Próximos jogos"}
-          </h1>
+          <h1 className="text-xl font-bold">Jogos da Copa</h1>
           <Link
             href={`/b/${selected.slug}`}
             className="text-sm text-primary hover:underline"
@@ -106,35 +74,26 @@ export default async function HomePage({
 
       <PendingBonus poolId={selected.id} status={bonusStatus} teams={teams} />
 
-      {matches.length === 0 ? (
+      {/* Progresso de palpites dos jogos */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Palpites dos jogos</span>
+        </div>
+        <span className="text-sm font-bold tabular-nums">
+          {betCount}
+          <span className="text-muted-foreground">/{totalMatches}</span>
+        </span>
+      </div>
+
+      {totalMatches === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             Nenhum jogo disponível. Aguarde a importação do calendário da Copa 2026.
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {grouped.map((g, i) => (
-            <section key={i}>
-              {/* Separador de fase/data */}
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                    {STAGE_LABEL[g.stage]}
-                    {g.group ? ` · Grupo ${g.group}` : ""}
-                  </span>
-                  <span className="text-sm capitalize text-muted-foreground">{g.date}</span>
-                </div>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-              <div className="space-y-3">
-                {g.matches.map((m) => (
-                  <MatchCard key={m.id} match={m} poolId={selected.id} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <GroupMatchesAccordion matches={matches} poolId={selected.id} />
       )}
     </div>
   );
