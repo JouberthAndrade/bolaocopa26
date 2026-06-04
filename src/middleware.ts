@@ -18,6 +18,7 @@ export default auth((req) => {
   const isPublicPage = PUBLIC_ROUTES.includes(pathname);
 
   // Convite público: /b/<slug>/join continua acessível, mas exige login para palpitar.
+  // Convites públicos: /b/<slug>/join remains accessible, but requires login to participate.
   if (!isLoggedIn && !isPublicPage) {
     const url = new URL("/login", req.nextUrl);
     url.searchParams.set("callbackUrl", pathname);
