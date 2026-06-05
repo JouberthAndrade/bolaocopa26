@@ -150,7 +150,7 @@ function TeamSelect({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 flex-1 bg-transparent text-sm focus:outline-none"
+          className="h-11 flex-1 bg-transparent text-sm focus:outline-none [color-scheme:light] dark:[color-scheme:dark]"
         >
           <option value="">Selecione a seleção…</option>
           {teams.map((t) => (
