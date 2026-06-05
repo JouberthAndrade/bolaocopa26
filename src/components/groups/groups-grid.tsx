@@ -75,7 +75,7 @@ export function GroupsGrid({
         open={openLetter !== null}
         onClose={() => setOpenLetter(null)}
         title={active ? `Grupo ${active.letter}` : "Grupo"}
-        description="Lance ou edite seus palpites desta chave"
+        description="Lance ou edite seus palpites desta chave · fecha 20 min antes de cada jogo"
       >
         {active && active.matches.length > 0 ? (
           active.matches.map((m) => (

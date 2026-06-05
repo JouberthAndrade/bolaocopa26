@@ -46,6 +46,8 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
   const kickoff = new Date(match.kickoffAt);
   const timeStr = kickoff.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const dateStr = kickoff.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  const lockAt = new Date(match.lockAt);
+  const lockTimeStr = lockAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div
@@ -141,6 +143,14 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
                 <ResultBadge match={match} />
               )}
             </div>
+          )}
+
+          {/* Horário de fechamento dos palpites */}
+          {!locked && (
+            <p className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <Clock className="h-3 w-3" />
+              Fecha às {lockTimeStr}
+            </p>
           )}
 
           {/* Status do autosave */}

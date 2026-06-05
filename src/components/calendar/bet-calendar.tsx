@@ -175,7 +175,7 @@ export function BetCalendar({
               })
             : "Jogos do dia"
         }
-        description={`${selectedMatches.length} ${selectedMatches.length === 1 ? "jogo" : "jogos"} · palpite até 20 min antes`}
+        description={`${selectedMatches.length} ${selectedMatches.length === 1 ? "jogo" : "jogos"} · palpites fecham 20 min antes de cada jogo`}
       >
         {selectedMatches.map((m) => (
           <MatchCard key={m.id} match={m} poolId={poolId} />

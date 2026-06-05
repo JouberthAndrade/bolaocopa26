@@ -4,7 +4,9 @@
       "Bash(npm -v)",
       "Bash(npx prisma *)",
       "Bash(npx next *)",
-      "PowerShell(npm run typecheck 2>&1)"
+      "PowerShell(npm run typecheck 2>&1)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file"
     ]
   }
 }
