@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireUserId, requireMembership } from "@/server/guards";
 import { isGroupStageComplete } from "@/server/services/matches";
 import { betSchema, championBetSchema } from "@/lib/validations";
+import { BONUS_DEADLINE } from "@/lib/constants";
 
 type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -63,8 +64,9 @@ export async function upsertChampionBet(input: unknown): Promise<ActionResult> {
     where: { id: poolId },
     select: { entryDeadline: true },
   });
-  if (pool?.entryDeadline && new Date() >= pool.entryDeadline) {
-    return { ok: false, error: "Prazo para palpite de campeão encerrado" };
+  const bonusDeadline = pool?.entryDeadline ?? BONUS_DEADLINE;
+  if (new Date() >= bonusDeadline) {
+    return { ok: false, error: "Prazo para palpites de bônus encerrado (até 10/06/2026)" };
   }
 
   await db.championBet.upsert({

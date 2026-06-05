@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { BONUS_DEADLINE } from "@/lib/constants";
 
 export type BonusKey = "champion" | "runnerUp" | "topScorer";
 
@@ -46,8 +47,8 @@ export async function getBonusStatus(opts: {
   ]);
 
   const rule = pool?.scoringRule;
-  const deadline = pool?.entryDeadline ?? null;
-  const open = !deadline || new Date() < deadline;
+  const deadline = pool?.entryDeadline ?? BONUS_DEADLINE;
+  const open = new Date() < deadline;
 
   const current = {
     champTeamId: bet?.champTeamId ?? null,
