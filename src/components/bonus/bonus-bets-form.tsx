@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check } from "lucide-react";
+import { useState, useTransition, useEffect, useRef } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { Flag } from "@/components/flag";
 import { Button } from "@/components/ui/button";
 import { upsertChampionBet } from "@/server/actions/bets";
@@ -131,35 +131,73 @@ function TeamSelect({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const selected = teams.find((t) => t.id === value);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   return (
-    <label className="block space-y-1.5">
+    <div className="space-y-1.5">
       <span className="flex items-center justify-between text-sm font-medium">
         {label}
         <span className="text-xs text-primary">+{bonus} pts</span>
       </span>
-      <div
-        className={cn(
-          "flex items-center gap-2 rounded-xl border border-input bg-secondary/80 px-3",
-          "focus-within:border-primary focus-within:ring-2 focus-within:ring-ring",
-        )}
-      >
-        {selected && (
-          <Flag countryCode={selected.countryCode} name={selected.name} size={22} />
-        )}
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-11 flex-1 bg-transparent text-sm focus:outline-none [color-scheme:light] dark:[color-scheme:dark]"
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            "flex h-11 w-full items-center gap-2 rounded-xl border border-input bg-secondary/80 px-3 text-sm transition-colors",
+            "focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            open && "border-primary ring-2 ring-ring",
+          )}
         >
-          <option value="">Selecione a seleção…</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+          {selected ? (
+            <>
+              <Flag countryCode={selected.countryCode} name={selected.name} size={22} />
+              <span className="flex-1 text-left">{selected.name}</span>
+            </>
+          ) : (
+            <span className="flex-1 text-left text-muted-foreground">Selecione a seleção…</span>
+          )}
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
+        </button>
+
+        {open && (
+          <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-card shadow-lg">
+            <button
+              type="button"
+              onClick={() => { onChange(""); setOpen(false); }}
+              className="flex h-9 w-full items-center px-3 text-sm text-muted-foreground hover:bg-secondary"
+            >
+              Selecione a seleção…
+            </button>
+            {teams.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => { onChange(t.id); setOpen(false); }}
+                className={cn(
+                  "flex h-9 w-full items-center gap-2 px-3 text-sm hover:bg-secondary",
+                  t.id === value && "bg-primary/15 text-primary",
+                )}
+              >
+                <Flag countryCode={t.countryCode} name={t.name} size={18} />
+                {t.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-    </label>
+    </div>
   );
 }
