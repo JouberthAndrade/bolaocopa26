@@ -5,11 +5,16 @@
 // aqui só ordenamos e classificamos o resultado para a UI.
 
 import { classifyBet, type BetResult } from "@/lib/bet-result";
+import type { BotKind } from "@prisma/client";
 
 export interface MatchupMember {
   userId: string;
   name: string | null;
   image: string | null;
+  /** true para os palpiteiros de IA (Claudinho/Gepeto) */
+  isBot?: boolean;
+  /** identidade do bot, quando isBot — define o layout diferenciado */
+  botKind?: BotKind | null;
 }
 
 export interface MatchupBet {
@@ -23,6 +28,8 @@ export interface MatchupRow {
   userId: string;
   name: string | null;
   image: string | null;
+  isBot: boolean;
+  botKind: BotKind | null;
   /** palpite do participante, ou null se ele não palpitou este jogo */
   guess: { home: number; away: number } | null;
   points: number;
@@ -42,14 +49,19 @@ export function buildMatchupRows(
   const byUser = new Map(bets.map((b) => [b.userId, b]));
 
   const rows: MatchupRow[] = members.map((m) => {
-    const bet = byUser.get(m.userId);
-    if (!bet) {
-      return { ...m, guess: null, points: 0, result: null };
-    }
-    return {
+    const base = {
       userId: m.userId,
       name: m.name,
       image: m.image,
+      isBot: m.isBot ?? false,
+      botKind: m.botKind ?? null,
+    };
+    const bet = byUser.get(m.userId);
+    if (!bet) {
+      return { ...base, guess: null, points: 0, result: null };
+    }
+    return {
+      ...base,
       guess: { home: bet.homeGuess, away: bet.awayGuess },
       points: bet.pointsEarned,
       result: classifyBet(
@@ -77,4 +89,27 @@ export function buildMatchupRows(
 
     return nameOf(a).localeCompare(nameOf(b), "pt-BR");
   });
+}
+
+/** Ordem fixa dos bots na seção de IA. */
+const BOT_ORDER: BotKind[] = ["CLAUDINHO", "GEPETO"];
+
+/**
+ * Separa as linhas em bots (palpiteiros de IA) e humanos. Os humanos preservam a
+ * ordem de `buildMatchupRows` (por pontos); os bots saem na ordem fixa BOT_ORDER
+ * para um layout estável na seção "Inteligência Artificial".
+ */
+export function splitBotRows(rows: MatchupRow[]): {
+  bots: MatchupRow[];
+  humans: MatchupRow[];
+} {
+  const bots = rows
+    .filter((r) => r.isBot)
+    .sort((a, b) => {
+      const ai = a.botKind ? BOT_ORDER.indexOf(a.botKind) : BOT_ORDER.length;
+      const bi = b.botKind ? BOT_ORDER.indexOf(b.botKind) : BOT_ORDER.length;
+      return ai - bi;
+    });
+  const humans = rows.filter((r) => !r.isBot);
+  return { bots, humans };
 }

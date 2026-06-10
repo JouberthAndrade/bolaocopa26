@@ -57,8 +57,9 @@ enum BotKind {
 }
 ```
 
-Migration via `npx prisma migrate dev --name add-bot-fields`. Humanos não são
-afetados (`isBot=false`, `botKind=null`).
+Aplicado via `npx prisma db push` (o projeto não usa histórico de migrations —
+não há pasta `prisma/migrations`). Colunas aditivas, nullable/com default, sem
+perda de dados. Humanos não são afetados (`isBot=false`, `botKind=null`).
 
 ### 2. Script — `scripts/seed-bots.ts` (`npm run seed:bots`)
 
@@ -70,13 +71,13 @@ Idempotente e reexecutável a cada rodada. Passos:
    (role `MEMBER`) para cada bot.
 3. **Carregar JSON** de `docs/claudinho.json` e `docs/gepeto.json`. Suportar as duas
    formas: Claudinho é `{ matches: [...] }`; Gepeto é um array puro.
-4. **Casar fixtures por par de seleções** (não por `round`/`date`, que são pouco
-   confiáveis em gepeto.json). Helper de normalização: lowercase, remover acentos,
-   normalizar `&`/`and`, mais um mapa de aliases para divergências conhecidas
-   (`USA↔United States`, `South Korea↔Korea Republic`, `Czech Republic`,
-   `Bosnia & Herzegovina`, `Curaçao↔Curacao`, `Ivory Coast`, etc.). Casar em
-   **qualquer orientação**; atribuir `homeGuess/awayGuess` conforme o home/away real
-   no DB (se DB.home == team1 → `homeGuess=score_team1`, senão inverter).
+4. **Casar fixtures por código ISO da seleção** (não por `round`/`date`, pouco
+   confiáveis em gepeto.json). O DB guarda nomes em **português** (`Alemanha`,
+   `Inglaterra`), então o casamento por nome seria frágil; em vez disso, mapeamos
+   cada nome em inglês do JSON → código ISO (`src/lib/team-name.ts` `teamCode`) e
+   casamos contra `Team.countryCode` do DB (estável, imune a acento/idioma). Casa
+   em **qualquer orientação**; atribui `homeGuess/awayGuess` conforme o home/away
+   real no DB (se DB.home == team1 → `homeGuess=score_team1`, senão inverter).
 5. **Upsert de `Bet`** por (bot, pool, match), garantido por `@@unique([userId,
    poolId, matchId])`. Reexecuções atualizam o palpite sem duplicar.
 6. **Re-pontuar finalizados:** após inserir as bets, setar `scored=false` nos jogos
@@ -85,6 +86,7 @@ Idempotente e reexecutável a cada rodada. Passos:
    ranking.
 7. **Relatório:** logar contagem de bets casadas/atualizadas por bot e listar
    fixtures do JSON sem `Match` correspondente no DB.
+8. **Não incluir nos valores**: Os bots não devem ser incluídos como menbros do bolão, ou seja, se o bolão tem 5 jogadores e vale 100 reias, o total fica 500 e não 700.
 
 **Dependência de dados:** o script só anexa bets a fixtures que **existem no DB**
 (via `npm run sync:matches`). Fixtures hipotéticos ainda não sincronizados são

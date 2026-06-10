@@ -7,7 +7,8 @@ export async function getPoolBySlug(slug: string) {
       scoringRule: true,
       prizeTiers: { orderBy: { position: "asc" } },
       invites: { take: 1, orderBy: { createdAt: "asc" } },
-      _count: { select: { memberships: true } },
+      // bots (Claudinho/Gepeto) não contam como participantes pagantes
+      _count: { select: { memberships: { where: { user: { isBot: false } } } } },
     },
   });
 }

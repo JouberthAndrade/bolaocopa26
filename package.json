@@ -16,7 +16,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:cleanup-demo": "tsx scripts/cleanup-demo.ts",
     "db:studio": "prisma studio",
-    "sync:matches": "tsx scripts/sync-matches.ts"
+    "sync:matches": "tsx scripts/sync-matches.ts",
+    "seed:bots": "tsx scripts/seed-bots.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

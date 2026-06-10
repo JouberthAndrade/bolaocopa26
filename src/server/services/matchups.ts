@@ -95,7 +95,10 @@ export async function getMatchupDetail(
   const [memberships, bets] = await Promise.all([
     db.membership.findMany({
       where: { poolId },
-      select: { userId: true, user: { select: { name: true, image: true } } },
+      select: {
+        userId: true,
+        user: { select: { name: true, image: true, isBot: true, botKind: true } },
+      },
     }),
     db.bet.findMany({
       where: { poolId, matchId },
@@ -107,6 +110,8 @@ export async function getMatchupDetail(
     userId: m.userId,
     name: m.user.name,
     image: m.user.image,
+    isBot: m.user.isBot,
+    botKind: m.user.botKind,
   }));
 
   const rows = buildMatchupRows(members, bets, {

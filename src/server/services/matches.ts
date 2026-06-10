@@ -9,7 +9,8 @@ export async function getUserPools(userId: string) {
       name: true,
       slug: true,
       betsVisibility: true,
-      _count: { select: { memberships: true } },
+      // bots não contam como participantes
+      _count: { select: { memberships: { where: { user: { isBot: false } } } } },
     },
   });
 }

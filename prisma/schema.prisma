@@ -12,6 +12,11 @@ datasource db {
 
 // ─────────────────────────── AUTH (Auth.js v5) ───────────────────────────
 
+enum BotKind {
+  CLAUDINHO
+  GEPETO
+}
+
 model User {
   id           String        @id @default(cuid())
   name         String?
@@ -19,6 +24,8 @@ model User {
   emailVerified DateTime?
   passwordHash String? // null para login social
   image        String?
+  isBot        Boolean       @default(false) // palpiteiro de IA (Claudinho/Gepeto)
+  botKind      BotKind? // diferencia o layout/identidade do bot
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 

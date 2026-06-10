@@ -16,7 +16,14 @@ export default async function InvitePage({
 
   const invite = await db.invite.findUnique({
     where: { code: code.toUpperCase() },
-    include: { pool: { include: { _count: { select: { memberships: true } } } } },
+    include: {
+      pool: {
+        include: {
+          // bots não entram na contagem de participantes
+          _count: { select: { memberships: { where: { user: { isBot: false } } } } },
+        },
+      },
+    },
   });
   if (!invite) notFound();
 

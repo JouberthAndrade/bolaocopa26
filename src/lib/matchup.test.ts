@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildMatchupRows, type MatchupMember, type MatchupBet } from "./matchup";
+import {
+  buildMatchupRows,
+  splitBotRows,
+  type MatchupMember,
+  type MatchupBet,
+} from "./matchup";
 
 const members: MatchupMember[] = [
   { userId: "ana", name: "Ana", image: null },
@@ -57,5 +62,37 @@ describe("buildMatchupRows", () => {
     expect(byId.ana.result?.kind).toBe("EXACT");
     expect(byId.bruno.result?.kind).toBe("RESULT");
     expect(byId.carla.result?.kind).toBe("MISS");
+  });
+});
+
+describe("splitBotRows", () => {
+  const botMembers: MatchupMember[] = [
+    { userId: "claudinho", name: "Claudinho", image: null, isBot: true, botKind: "CLAUDINHO" },
+    { userId: "gepeto", name: "Gepeto", image: null, isBot: true, botKind: "GEPETO" },
+    { userId: "ana", name: "Ana", image: null },
+    { userId: "bruno", name: "Bruno", image: null },
+  ];
+
+  it("separa bots dos humanos preservando a ordem das linhas humanas", () => {
+    const bets: MatchupBet[] = [
+      { userId: "claudinho", homeGuess: 2, awayGuess: 0, pointsEarned: 4 },
+      { userId: "gepeto", homeGuess: 2, awayGuess: 1, pointsEarned: 3 },
+      { userId: "ana", homeGuess: 1, awayGuess: 0, pointsEarned: 3 },
+      { userId: "bruno", homeGuess: 0, awayGuess: 0, pointsEarned: 0 },
+    ];
+    const rows = buildMatchupRows(botMembers, bets, actual);
+    const { bots, humans } = splitBotRows(rows);
+
+    expect(bots.map((r) => r.userId).sort()).toEqual(["claudinho", "gepeto"]);
+    expect(humans.map((r) => r.userId)).toEqual(["ana", "bruno"]);
+    // ordena bots por kind: Claudinho antes de Gepeto
+    expect(bots.map((r) => r.botKind)).toEqual(["CLAUDINHO", "GEPETO"]);
+  });
+
+  it("retorna bots vazio quando não há bots", () => {
+    const rows = buildMatchupRows(members.slice(0, 2), [], actual);
+    const { bots, humans } = splitBotRows(rows);
+    expect(bots).toHaveLength(0);
+    expect(humans).toHaveLength(2);
   });
 });
