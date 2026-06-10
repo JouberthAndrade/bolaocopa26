@@ -6,19 +6,22 @@ import { env } from "@/lib/env";
 import { getPoolBySlug } from "@/server/services/pool";
 import { getRanking } from "@/server/services/ranking";
 import { getFeed } from "@/server/services/feed";
+import { getFinishedMatchups } from "@/server/services/matchups";
 import { RankingTable } from "@/components/pool/ranking-table";
 import { FeedList } from "@/components/pool/feed-list";
+import { ConfrontoList } from "@/components/pool/confronto-list";
 import { InviteCard } from "@/components/pool/invite-card";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { formatCurrency, cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "ranking" | "feed" | "regras";
+type Tab = "ranking" | "feed" | "confronto" | "regras";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "ranking", label: "Ranking" },
   { key: "feed", label: "Feed" },
+  { key: "confronto", label: "Confronto" },
   { key: "regras", label: "Regras" },
 ];
 
@@ -81,6 +84,7 @@ export default async function PoolPage({
 
       {tab === "ranking" && <RankingSection poolId={pool.id} userId={userId} />}
       {tab === "feed" && <FeedSection poolId={pool.id} />}
+      {tab === "confronto" && <ConfrontoSection poolId={pool.id} />}
       {tab === "regras" && (
         <RulesSection
           pool={pool}
@@ -104,6 +108,11 @@ async function RankingSection({ poolId, userId }: { poolId: string; userId: stri
 async function FeedSection({ poolId }: { poolId: string }) {
   const items = await getFeed(poolId);
   return <FeedList items={items} />;
+}
+
+async function ConfrontoSection({ poolId }: { poolId: string }) {
+  const matches = await getFinishedMatchups(poolId);
+  return <ConfrontoList poolId={poolId} matches={matches} />;
 }
 
 function RulesSection({
