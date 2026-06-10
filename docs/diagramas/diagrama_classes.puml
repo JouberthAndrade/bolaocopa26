@@ -1,0 +1,190 @@
+@startuml diagrama_classes
+!pragma layout smetana
+title Diagrama de Classes (UML) - Bolao Copa do Mundo FIFA 2026
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FBFBFD
+  BorderColor #34495E
+  ArrowColor #34495E
+}
+
+' ----------------- DOMINIO -----------------
+class User {
+  +id : String
+  +name : String
+  +email : String
+  +passwordHash : String
+  +isBot : boolean
+  +botKind : BotKind
+  --
+  +validarSenha(senha) : boolean
+  +ehPalpiteiroIA() : boolean
+}
+
+class Pool {
+  +id : String
+  +name : String
+  +slug : String
+  +stakeAmount : Decimal
+  +entryDeadline : DateTime
+  +betsVisibility : BetsVisibility
+  --
+  +adicionarMembro(user) : Membership
+  +gerarConvite() : Invite
+}
+
+class Membership {
+  +id : String
+  +role : Role
+  +paid : boolean
+  +totalPoints : int
+  +joinedAt : DateTime
+}
+
+class ScoringRule {
+  +pointsExactScore : int
+  +pointsCorrectResult : int
+  +pointsCorrectDraw : int
+  +championBonus : int
+  +runnerUpBonus : int
+  +topScorerBonus : int
+}
+
+class PrizeTier {
+  +position : int
+  +percentage : Decimal
+}
+
+class Invite {
+  +code : String
+  +maxUses : int
+  +uses : int
+  +expiresAt : DateTime
+}
+
+class Tournament {
+  +id : String
+  +name : String
+  +season : String
+}
+
+class Team {
+  +id : String
+  +name : String
+  +countryCode : String
+  +group : String
+}
+
+class Match {
+  +id : String
+  +homeScore : int
+  +awayScore : int
+  +stage : MatchStage
+  +kickoffAt : DateTime
+  +lockAt : DateTime
+  +status : MatchStatus
+  --
+  +estaTravado() : boolean
+  +resultado() : Resultado
+}
+
+class Bet {
+  +id : String
+  +homeGuess : int
+  +awayGuess : int
+  +pointsEarned : int
+  --
+  +calcularPontos(regra, jogo) : int
+}
+
+class ChampionBet {
+  +id : String
+  +champTeamId : String
+  +runnerUpTeamId : String
+  +topScorerName : String
+  +pointsEarned : int
+}
+
+class FeedEvent {
+  +id : String
+  +type : FeedType
+  +payload : Json
+  +createdAt : DateTime
+}
+
+' ----------------- SERVICOS (camada de negocio) -----------------
+class ScoringService <<service>> {
+  +pontuarJogo(jogo) : void
+  +pontosDoPalpite(palpite, jogo, regra) : int
+}
+
+class RankingService <<service>> {
+  +recalcular(pool) : void
+  +classificacao(pool) : List<Membership>
+}
+
+class SyncService <<service>> {
+  +sincronizarJogos() : void
+  +atualizarPlacar(jogo) : void
+}
+
+class FootballDataProvider <<provider>> {
+  +buscarPartidas() : List<Match>
+  +buscarPlacares() : List<Resultado>
+}
+
+' ----------------- ENUMS -----------------
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+enum BetsVisibility {
+  HIDDEN
+  OPEN
+  AFTER_LOCK
+}
+enum MatchStage {
+  GROUP
+  R32
+  R16
+  QF
+  SF
+  FINAL
+}
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+' ----------------- RELACIONAMENTOS -----------------
+User "1" -- "0..*" Membership
+User "1" -- "0..*" Bet
+User "1" -- "0..*" ChampionBet
+User "1" -- "0..*" Pool : possui >
+
+Pool "1" -- "0..*" Membership
+Pool "1" -- "0..1" ScoringRule
+Pool "1" -- "0..*" PrizeTier
+Pool "1" -- "0..*" Invite
+Pool "1" -- "0..*" Bet
+Pool "1" -- "0..*" ChampionBet
+Pool "1" -- "0..*" FeedEvent
+
+Tournament "1" -- "0..*" Pool
+Tournament "1" -- "0..*" Team
+Tournament "1" -- "0..*" Match
+
+Team "1" -- "0..*" Match : manda >
+Match "1" -- "0..*" Bet
+
+ScoringService ..> Bet : pontua
+ScoringService ..> Match : le
+RankingService ..> Membership : atualiza
+SyncService ..> Match : grava
+SyncService ..> FootballDataProvider : consome
+@enduml

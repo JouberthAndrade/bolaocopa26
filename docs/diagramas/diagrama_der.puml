@@ -1,0 +1,170 @@
+@startuml diagrama_der
+!pragma layout smetana
+title Diagrama Entidade-Relacionamento (DER) - Banco PostgreSQL
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam entity {
+  BackgroundColor #FBFBFD
+  BorderColor #2C3E50
+}
+
+entity "User" as user {
+  *id : String <<PK>>
+  --
+  email : String <<UQ>>
+  name : String
+  passwordHash : String
+  isBot : Boolean
+  botKind : BotKind
+}
+
+entity "Account" as account {
+  *id : String <<PK>>
+  --
+  #userId : String <<FK>>
+  provider : String
+  providerAccountId : String
+}
+
+entity "Session" as session {
+  *id : String <<PK>>
+  --
+  #userId : String <<FK>>
+  sessionToken : String <<UQ>>
+  expires : DateTime
+}
+
+entity "Tournament" as tournament {
+  *id : String <<PK>>
+  --
+  name : String
+  season : String
+  externalId : String <<UQ>>
+}
+
+entity "Team" as team {
+  *id : String <<PK>>
+  --
+  #tournamentId : String <<FK>>
+  name : String
+  countryCode : String
+  group : String
+}
+
+entity "Match" as match {
+  *id : String <<PK>>
+  --
+  #tournamentId : String <<FK>>
+  #homeTeamId : String <<FK>>
+  #awayTeamId : String <<FK>>
+  homeScore : Int
+  awayScore : Int
+  stage : MatchStage
+  kickoffAt : DateTime
+  lockAt : DateTime
+  status : MatchStatus
+}
+
+entity "Pool" as pool {
+  *id : String <<PK>>
+  --
+  #tournamentId : String <<FK>>
+  #ownerId : String <<FK>>
+  name : String
+  slug : String <<UQ>>
+  stakeAmount : Decimal
+  betsVisibility : BetsVisibility
+}
+
+entity "Membership" as membership {
+  *id : String <<PK>>
+  --
+  #userId : String <<FK>>
+  #poolId : String <<FK>>
+  role : Role
+  paid : Boolean
+  totalPoints : Int
+}
+
+entity "ScoringRule" as scoringrule {
+  *id : String <<PK>>
+  --
+  #poolId : String <<FK,UQ>>
+  pointsExactScore : Int
+  pointsCorrectResult : Int
+  championBonus : Int
+}
+
+entity "PrizeTier" as prizetier {
+  *id : String <<PK>>
+  --
+  #poolId : String <<FK>>
+  position : Int
+  percentage : Decimal
+}
+
+entity "Invite" as invite {
+  *id : String <<PK>>
+  --
+  #poolId : String <<FK>>
+  code : String <<UQ>>
+  maxUses : Int
+  uses : Int
+}
+
+entity "Bet" as bet {
+  *id : String <<PK>>
+  --
+  #userId : String <<FK>>
+  #poolId : String <<FK>>
+  #matchId : String <<FK>>
+  homeGuess : Int
+  awayGuess : Int
+  pointsEarned : Int
+}
+
+entity "ChampionBet" as championbet {
+  *id : String <<PK>>
+  --
+  #userId : String <<FK>>
+  #poolId : String <<FK>>
+  champTeamId : String
+  runnerUpTeamId : String
+  topScorerName : String
+}
+
+entity "FeedEvent" as feedevent {
+  *id : String <<PK>>
+  --
+  #poolId : String <<FK>>
+  #userId : String <<FK>>
+  type : FeedType
+  payload : Json
+}
+
+' ----------------- CARDINALIDADES (crow's foot) -----------------
+user ||--o{ account
+user ||--o{ session
+user ||--o{ membership
+user ||--o{ bet
+user ||--o{ championbet
+user ||--o{ feedevent
+user ||--o{ pool
+
+tournament ||--o{ pool
+tournament ||--o{ team
+tournament ||--o{ match
+
+team ||--o{ match
+match ||--o{ bet
+
+pool ||--o{ membership
+pool ||--|| scoringrule
+pool ||--o{ prizetier
+pool ||--o{ invite
+pool ||--o{ bet
+pool ||--o{ championbet
+pool ||--o{ feedevent
+@enduml
