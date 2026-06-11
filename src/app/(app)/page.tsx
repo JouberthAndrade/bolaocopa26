@@ -9,6 +9,7 @@ import {
 import { getBonusStatus } from "@/server/services/bonus";
 import { GroupMatchesAccordion } from "@/components/match/group-matches-accordion";
 import { PendingBonus } from "@/components/bonus/pending-bonus";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { PoolSelector } from "@/components/pool/pool-selector";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,6 +59,9 @@ export default async function HomePage({
 
   return (
     <div className="space-y-6">
+      {/* Atualiza placares ao vivo sem reload manual */}
+      <AutoRefresh />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
