@@ -42,6 +42,8 @@ export interface LiveScoreResult {
   promoted: number;
   unmatched: { fixtureId: number; home: string; away: string }[];
   rateLimit: RateLimit;
+  /** preenchido quando a API recusou a chamada (ex.: quota diária esgotada) */
+  note?: string;
 }
 
 /**
@@ -69,8 +71,26 @@ export async function updateLiveScores(): Promise<LiveScoreResult> {
   }
 
   const data = (await res.json()) as ApiSportsResponse;
-  if (Array.isArray(data.errors) ? data.errors.length > 0 : data.errors) {
-    throw new Error(`API-Sports retornou erros: ${JSON.stringify(data.errors)}`);
+  const errs = data.errors;
+  const hasErrors = Array.isArray(errs)
+    ? errs.length > 0
+    : !!errs && Object.keys(errs).length > 0;
+  if (hasErrors) {
+    const text = JSON.stringify(errs).toLowerCase();
+    // Quota/limite é transitório e esperado no plano free — não é falha do
+    // servidor. Retorna 200 com nota (cron não marca como erro); o detalhe
+    // fica visível na resposta. Erros reais (chave inválida etc.) sobem como 500.
+    if (text.includes("limit") || text.includes("rate") || text.includes("quota")) {
+      return {
+        live: 0,
+        updated: 0,
+        promoted: 0,
+        unmatched: [],
+        rateLimit,
+        note: `api-limit: ${JSON.stringify(errs)}`,
+      };
+    }
+    throw new Error(`API-Sports retornou erros: ${JSON.stringify(errs)}`);
   }
 
   const fixtures: LiveFixture[] = (data.response ?? []).map((r) => ({
