@@ -129,9 +129,9 @@ model Membership {
 model ScoringRule {
   id                  String @id @default(cuid())
   poolId              String @unique
-  pointsExactScore    Int    @default(1) // bônus por placar exato (somado a result)
-  pointsCorrectResult Int    @default(3) // acertou vencedor
-  pointsCorrectDraw   Int    @default(2) // acertou empate
+  pointsExactScore    Int    @default(1) // bônus por placar exato (somado a result/draw → exato = 3)
+  pointsCorrectResult Int    @default(2) // acertou o resultado (vencedor)
+  pointsCorrectDraw   Int    @default(2) // acertou o resultado (empate)
   championBonus       Int    @default(5)
   runnerUpBonus       Int    @default(3)
   topScorerBonus      Int    @default(5)

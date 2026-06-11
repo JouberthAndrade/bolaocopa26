@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SCORING_PRESETS = {
-  classico: { label: "Clássico (3/2/+1)", result: 3, draw: 2, exact: 1 },
-  agressivo: { label: "Agressivo (5/3/+2)", result: 5, draw: 3, exact: 2 },
+  padrao: { label: "Padrão (exato 3 / resultado 2)", result: 2, draw: 2, exact: 1 },
+  agressivo: { label: "Agressivo (exato 5 / resultado 3)", result: 3, draw: 3, exact: 2 },
   exato: { label: "Só placar exato (10)", result: 0, draw: 0, exact: 10 },
 };
 
@@ -21,7 +21,7 @@ export function CreatePoolForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [scoring, setScoring] = useState({ result: 3, draw: 2, exact: 1 });
+  const [scoring, setScoring] = useState({ result: 2, draw: 2, exact: 1 });
   const [prizes, setPrizes] = useState<PrizeTier[]>([{ position: 1, percentage: 100 }]);
   const [betsVisibility, setBetsVisibility] = useState<"HIDDEN" | "OPEN" | "AFTER_LOCK">("AFTER_LOCK");
 
@@ -117,9 +117,9 @@ export function CreatePoolForm() {
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <LabeledNumber label="Vitória" value={scoring.result} onChange={(v) => setScoring((s) => ({ ...s, result: v }))} />
-            <LabeledNumber label="Empate" value={scoring.draw} onChange={(v) => setScoring((s) => ({ ...s, draw: v }))} />
-            <LabeledNumber label="Placar exato (+)" value={scoring.exact} onChange={(v) => setScoring((s) => ({ ...s, exact: v }))} />
+            <LabeledNumber label="Resultado (vitória)" value={scoring.result} onChange={(v) => setScoring((s) => ({ ...s, result: v }))} />
+            <LabeledNumber label="Resultado (empate)" value={scoring.draw} onChange={(v) => setScoring((s) => ({ ...s, draw: v }))} />
+            <LabeledNumber label="Bônus placar exato (+)" value={scoring.exact} onChange={(v) => setScoring((s) => ({ ...s, exact: v }))} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <NamedNumber name="championBonus" label="Bônus campeão" def={5} />

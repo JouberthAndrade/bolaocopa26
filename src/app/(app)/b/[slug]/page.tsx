@@ -130,9 +130,18 @@ function RulesSection({
       <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="mb-2 font-semibold">Pontuação</h3>
         <ul className="space-y-1 text-sm text-muted-foreground">
-          <li>Acertar o vencedor: <b className="text-foreground">{r?.pointsCorrectResult}</b> pts</li>
-          <li>Acertar empate: <b className="text-foreground">{r?.pointsCorrectDraw}</b> pts</li>
-          <li>Placar exato: <b className="text-foreground">+{r?.pointsExactScore}</b> pts (bônus)</li>
+          {r && r.pointsCorrectResult === r.pointsCorrectDraw ? (
+            <>
+              <li>Placar exato: <b className="text-foreground">{r.pointsCorrectResult + r.pointsExactScore}</b> pts</li>
+              <li>Acertar o resultado (vencedor ou empate): <b className="text-foreground">{r.pointsCorrectResult}</b> pts</li>
+            </>
+          ) : (
+            <>
+              <li>Acertar o vencedor: <b className="text-foreground">{r?.pointsCorrectResult}</b> pts</li>
+              <li>Acertar empate: <b className="text-foreground">{r?.pointsCorrectDraw}</b> pts</li>
+              <li>Placar exato: <b className="text-foreground">+{r?.pointsExactScore}</b> pts (bônus)</li>
+            </>
+          )}
           <li>Bônus campeão: <b className="text-foreground">{r?.championBonus}</b> pts</li>
           <li>Bônus vice: <b className="text-foreground">{r?.runnerUpBonus}</b> pts</li>
           <li>Bônus artilheiro: <b className="text-foreground">{r?.topScorerBonus}</b> pts</li>

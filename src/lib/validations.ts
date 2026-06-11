@@ -39,7 +39,7 @@ export const createPoolSchema = z
     betsVisibility: z.enum(["HIDDEN", "OPEN", "AFTER_LOCK"]).default("AFTER_LOCK"),
     // regras de pontuação
     pointsExactScore: z.number().int().min(0).max(100).default(1),
-    pointsCorrectResult: z.number().int().min(0).max(100).default(3),
+    pointsCorrectResult: z.number().int().min(0).max(100).default(2),
     pointsCorrectDraw: z.number().int().min(0).max(100).default(2),
     championBonus: z.number().int().min(0).max(100).default(5),
     runnerUpBonus: z.number().int().min(0).max(100).default(3),

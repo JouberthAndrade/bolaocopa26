@@ -1,38 +1,39 @@
 import { describe, it, expect } from "vitest";
 import { computeBetPoints } from "./scoring";
 
-// Regra padrão do bolão (ScoringRule): vitória=3, empate=2, bônus placar exato=+1.
-const rule = { pointsCorrectResult: 3, pointsCorrectDraw: 2, pointsExactScore: 1 };
+// Regra padrão do bolão (ScoringRule): resultado=2 (vitória ou empate),
+// bônus placar exato=+1 → placar exato vale 3.
+const rule = { pointsCorrectResult: 2, pointsCorrectDraw: 2, pointsExactScore: 1 };
 
 describe("computeBetPoints — exemplos da especificação", () => {
-  it("Brasil 2x1, real 2x1 → vencedor + placar exato = 4", () => {
-    expect(computeBetPoints(rule, { home: 2, away: 1 }, { home: 2, away: 1 })).toBe(4);
+  it("palpite 1x0, real 1x0 → placar exato = 3", () => {
+    expect(computeBetPoints(rule, { home: 1, away: 0 }, { home: 1, away: 0 })).toBe(3);
   });
 
-  it("Brasil 1x0, real 2x1 → só vencedor = 3", () => {
-    expect(computeBetPoints(rule, { home: 1, away: 0 }, { home: 2, away: 1 })).toBe(3);
+  it("palpite 2x0, real 1x0 → acertou o resultado = 2", () => {
+    expect(computeBetPoints(rule, { home: 2, away: 0 }, { home: 1, away: 0 })).toBe(2);
   });
 
-  it("Brasil 1x1, real 2x1 → errou = 0", () => {
-    expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 2, away: 1 })).toBe(0);
+  it("palpite 2x2, real 1x1 → acertou o empate sem placar = 2", () => {
+    expect(computeBetPoints(rule, { home: 2, away: 2 }, { home: 1, away: 1 })).toBe(2);
+  });
+
+  it("palpite 2x2, real 2x2 → empate com placar exato = 3", () => {
+    expect(computeBetPoints(rule, { home: 2, away: 2 }, { home: 2, away: 2 })).toBe(3);
   });
 });
 
-describe("computeBetPoints — empates e bônus", () => {
-  it("empate exato → empate + bônus = 3", () => {
-    expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 })).toBe(3);
-  });
-
-  it("acertou empate sem placar exato → 2", () => {
-    expect(computeBetPoints(rule, { home: 0, away: 0 }, { home: 2, away: 2 })).toBe(2);
+describe("computeBetPoints — erros", () => {
+  it("palpite 1x1, real 2x1 → errou = 0", () => {
+    expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 2, away: 1 })).toBe(0);
   });
 
   it("previu vitória mas deu empate → 0", () => {
     expect(computeBetPoints(rule, { home: 2, away: 1 }, { home: 1, away: 1 })).toBe(0);
   });
 
-  it("vitória do visitante, exata → 4", () => {
-    expect(computeBetPoints(rule, { home: 0, away: 2 }, { home: 0, away: 2 })).toBe(4);
+  it("inverteu o vencedor → 0", () => {
+    expect(computeBetPoints(rule, { home: 0, away: 2 }, { home: 2, away: 0 })).toBe(0);
   });
 });
 
