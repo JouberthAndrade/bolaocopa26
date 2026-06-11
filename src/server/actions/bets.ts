@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireUserId, requireMembership } from "@/server/guards";
 import { isGroupStageComplete } from "@/server/services/matches";
 import { betSchema, championBetSchema } from "@/lib/validations";
-import { BONUS_DEADLINE } from "@/lib/constants";
+import { bonusDeadlineFor } from "@/lib/constants";
 
 type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -64,7 +64,7 @@ export async function upsertChampionBet(input: unknown): Promise<ActionResult> {
     where: { id: poolId },
     select: { entryDeadline: true },
   });
-  const bonusDeadline = pool?.entryDeadline ?? BONUS_DEADLINE;
+  const bonusDeadline = bonusDeadlineFor(pool?.entryDeadline);
   if (new Date() >= bonusDeadline) {
     const fmt = bonusDeadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",

@@ -7,6 +7,8 @@ import { getPoolBySlug } from "@/server/services/pool";
 import { getRanking } from "@/server/services/ranking";
 import { getFeed } from "@/server/services/feed";
 import { getRevealedMatchups } from "@/server/services/matchups";
+import { getBonusMatchup } from "@/server/services/bonus";
+import { BonusMatchup } from "@/components/bonus/bonus-matchup";
 import { RankingTable } from "@/components/pool/ranking-table";
 import { FeedList } from "@/components/pool/feed-list";
 import { ConfrontoList } from "@/components/pool/confronto-list";
@@ -111,8 +113,16 @@ async function FeedSection({ poolId }: { poolId: string }) {
 }
 
 async function ConfrontoSection({ poolId }: { poolId: string }) {
-  const matches = await getRevealedMatchups(poolId);
-  return <ConfrontoList poolId={poolId} matches={matches} />;
+  const [matches, bonusRows] = await Promise.all([
+    getRevealedMatchups(poolId),
+    getBonusMatchup(poolId),
+  ]);
+  return (
+    <div className="space-y-4">
+      {bonusRows && <BonusMatchup rows={bonusRows} />}
+      <ConfrontoList poolId={poolId} matches={matches} />
+    </div>
+  );
 }
 
 function RulesSection({

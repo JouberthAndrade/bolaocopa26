@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireUserId } from "@/server/guards";
 import { getUserPools } from "@/server/services/matches";
 import { getRevealedMatchups } from "@/server/services/matchups";
+import { getBonusMatchup } from "@/server/services/bonus";
 import { ConfrontoList } from "@/components/pool/confronto-list";
+import { BonusMatchup } from "@/components/bonus/bonus-matchup";
 import { PoolSelector } from "@/components/pool/pool-selector";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +41,10 @@ export default async function ConfrontoPage({
   }
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
-  const matches = await getRevealedMatchups(selected.id);
+  const [matches, bonusRows] = await Promise.all([
+    getRevealedMatchups(selected.id),
+    getBonusMatchup(selected.id),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -52,6 +57,8 @@ export default async function ConfrontoPage({
         </div>
         <PoolSelector pools={pools} current={selected.slug} basePath="/confronto" />
       </div>
+
+      {bonusRows && <BonusMatchup rows={bonusRows} />}
 
       <ConfrontoList poolId={selected.id} matches={matches} />
     </div>
