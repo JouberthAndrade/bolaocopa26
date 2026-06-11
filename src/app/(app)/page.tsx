@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import { ListChecks, Receipt, ChevronRight } from "lucide-react";
 import { requireUserId } from "@/server/guards";
 import {
   getUserPools,
@@ -74,17 +74,27 @@ export default async function HomePage({
 
       <PendingBonus poolId={selected.id} status={bonusStatus} teams={teams} />
 
-      {/* Progresso de palpites dos jogos */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+      {/* Progresso de palpites dos jogos — leva ao extrato */}
+      <Link
+        href={`/extrato?pool=${selected.slug}`}
+        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-colors hover:border-primary/60"
+      >
         <div className="flex items-center gap-2">
           <ListChecks className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Palpites dos jogos</span>
         </div>
-        <span className="text-sm font-bold tabular-nums">
-          {betCount}
-          <span className="text-muted-foreground">/{totalMatches}</span>
+        <span className="flex items-center gap-2 text-sm">
+          <span className="font-bold tabular-nums">
+            {betCount}
+            <span className="text-muted-foreground">/{totalMatches}</span>
+          </span>
+          <span className="flex items-center gap-1 text-primary">
+            <Receipt className="h-4 w-4" />
+            Ver extrato
+            <ChevronRight className="h-4 w-4" />
+          </span>
         </span>
-      </div>
+      </Link>
 
       {totalMatches === 0 ? (
         <Card>
