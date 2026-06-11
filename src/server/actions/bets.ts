@@ -66,7 +66,15 @@ export async function upsertChampionBet(input: unknown): Promise<ActionResult> {
   });
   const bonusDeadline = pool?.entryDeadline ?? BONUS_DEADLINE;
   if (new Date() >= bonusDeadline) {
-    return { ok: false, error: "Prazo para palpites de bônus encerrado (até 10/06/2026)" };
+    const fmt = bonusDeadline.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return { ok: false, error: `Prazo para palpites de bônus encerrado em ${fmt}` };
   }
 
   await db.championBet.upsert({
