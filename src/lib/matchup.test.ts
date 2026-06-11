@@ -51,6 +51,20 @@ describe("buildMatchupRows", () => {
     expect(rows[0].result?.kind).toBe("EXACT");
   });
 
+  it("sem placar (revelado antes do jogo) → mostra palpites sem classificar", () => {
+    const bets: MatchupBet[] = [
+      { userId: "ana", homeGuess: 2, awayGuess: 0, pointsEarned: 0 },
+      { userId: "bruno", homeGuess: 1, awayGuess: 1, pointsEarned: 0 },
+    ];
+    const rows = buildMatchupRows(members.slice(0, 3), bets, null);
+    const byId = Object.fromEntries(rows.map((r) => [r.userId, r]));
+    expect(byId.ana.guess).toEqual({ home: 2, away: 0 });
+    expect(byId.ana.result).toBeNull();
+    expect(byId.bruno.result).toBeNull();
+    // quem não palpitou continua por último
+    expect(rows[rows.length - 1].userId).toBe("carla");
+  });
+
   it("classifica o resultado de cada palpite", () => {
     const bets: MatchupBet[] = [
       { userId: "ana", homeGuess: 2, awayGuess: 0, pointsEarned: 4 },

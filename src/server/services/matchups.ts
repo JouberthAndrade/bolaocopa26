@@ -1,42 +1,48 @@
+import type { MatchStatus } from "@prisma/client";
 import { db } from "@/lib/db";
+import { matchRevealAt, REVEAL_BEFORE_KICKOFF_MS } from "@/lib/constants";
 import { buildMatchupRows, type MatchupRow } from "@/lib/matchup";
 
 export interface ConfrontoMatch {
   id: string;
   stage: string;
   group: string | null;
+  status: MatchStatus;
   kickoffAt: Date;
-  homeScore: number;
-  awayScore: number;
+  /** null enquanto o jogo não tiver placar (revelado antes de começar) */
+  homeScore: number | null;
+  awayScore: number | null;
   home: { name: string; countryCode: string };
   away: { name: string; countryCode: string };
   betsCount: number;
 }
 
 /**
- * Jogos já encerrados do torneio do bolão, mais recentes primeiro, com a
- * contagem de palpites feitos NESTE bolão. Leve — alimenta a lista da aba.
+ * Jogos do torneio com palpites já revelados neste bolão: encerrados, ao vivo
+ * ou a até 10 minutos do início (nunca antes do travamento). Mais recentes
+ * primeiro, com a contagem de palpites feitos NESTE bolão.
  */
-export async function getFinishedMatchups(poolId: string): Promise<ConfrontoMatch[]> {
+export async function getRevealedMatchups(poolId: string): Promise<ConfrontoMatch[]> {
   const pool = await db.pool.findUnique({
     where: { id: poolId },
     select: { tournamentId: true },
   });
   if (!pool) return [];
 
+  const now = new Date();
   const matches = await db.match.findMany({
     where: {
       tournamentId: pool.tournamentId,
-      status: "FINISHED",
-      homeScore: { not: null },
-      awayScore: { not: null },
+      kickoffAt: { lte: new Date(now.getTime() + REVEAL_BEFORE_KICKOFF_MS) },
     },
     orderBy: { kickoffAt: "desc" },
     select: {
       id: true,
       stage: true,
       group: true,
+      status: true,
       kickoffAt: true,
+      lockAt: true,
       homeScore: true,
       awayScore: true,
       homeTeam: { select: { name: true, countryCode: true } },
@@ -45,24 +51,28 @@ export async function getFinishedMatchups(poolId: string): Promise<ConfrontoMatc
     },
   });
 
-  return matches.map((m) => ({
-    id: m.id,
-    stage: m.stage,
-    group: m.group,
-    kickoffAt: m.kickoffAt,
-    homeScore: m.homeScore!,
-    awayScore: m.awayScore!,
-    home: m.homeTeam,
-    away: m.awayTeam,
-    betsCount: m._count.bets,
-  }));
+  return matches
+    .filter((m) => now >= matchRevealAt(m.kickoffAt, m.lockAt))
+    .map((m) => ({
+      id: m.id,
+      stage: m.stage,
+      group: m.group,
+      status: m.status,
+      kickoffAt: m.kickoffAt,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      home: m.homeTeam,
+      away: m.awayTeam,
+      betsCount: m._count.bets,
+    }));
 }
 
 export interface MatchupDetail {
   match: {
     id: string;
-    homeScore: number;
-    awayScore: number;
+    status: MatchStatus;
+    homeScore: number | null;
+    awayScore: number | null;
     home: { name: string; countryCode: string };
     away: { name: string; countryCode: string };
   };
@@ -70,9 +80,9 @@ export interface MatchupDetail {
 }
 
 /**
- * Palpites de todos os participantes do bolão para um jogo. Só revela depois do
- * travamento (lockAt) — sempre verdadeiro para jogos finalizados, mas validamos
- * de qualquer forma para nunca vazar palpite de jogo ainda aberto.
+ * Palpites de todos os participantes do bolão para um jogo. Revela a partir de
+ * 10 minutos antes do início (e nunca antes do lockAt) — assim ninguém vê
+ * palpite que ainda pode ser editado.
  */
 export async function getMatchupDetail(
   poolId: string,
@@ -82,6 +92,8 @@ export async function getMatchupDetail(
     where: { id: matchId },
     select: {
       id: true,
+      status: true,
+      kickoffAt: true,
       lockAt: true,
       homeScore: true,
       awayScore: true,
@@ -89,8 +101,8 @@ export async function getMatchupDetail(
       awayTeam: { select: { name: true, countryCode: true } },
     },
   });
-  if (!match || match.homeScore == null || match.awayScore == null) return null;
-  if (new Date() < match.lockAt) return null; // ainda não revela
+  if (!match) return null;
+  if (new Date() < matchRevealAt(match.kickoffAt, match.lockAt)) return null; // ainda não revela
 
   const [memberships, bets] = await Promise.all([
     db.membership.findMany({
@@ -114,14 +126,17 @@ export async function getMatchupDetail(
     botKind: m.user.botKind,
   }));
 
-  const rows = buildMatchupRows(members, bets, {
-    home: match.homeScore,
-    away: match.awayScore,
-  });
+  const actual =
+    match.homeScore != null && match.awayScore != null
+      ? { home: match.homeScore, away: match.awayScore }
+      : null;
+
+  const rows = buildMatchupRows(members, bets, actual);
 
   return {
     match: {
       id: match.id,
+      status: match.status,
       homeScore: match.homeScore,
       awayScore: match.awayScore,
       home: match.homeTeam,

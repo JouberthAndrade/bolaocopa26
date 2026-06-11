@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Target, Trophy, X, Users, ChevronRight, Bot } from "lucide-react";
+import { Target, Trophy, X, Users, ChevronRight, Bot, Wifi, Clock } from "lucide-react";
 import { Flag } from "@/components/flag";
 import { Dialog } from "@/components/ui/dialog";
 import { STAGE_LABEL } from "@/lib/labels";
@@ -39,7 +39,8 @@ export function ConfrontoList({
   if (matches.length === 0) {
     return (
       <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-        Nenhum jogo encerrado ainda — volte quando a bola rolar. ⚽
+        Nenhum confronto disponível — os palpites são revelados 10 minutos antes
+        de cada partida. ⚽
       </p>
     );
   }
@@ -55,15 +56,30 @@ export function ConfrontoList({
               className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-secondary/40"
             >
               <div className="min-w-0 flex-1">
-                <p className="mb-1 text-xs text-muted-foreground">
+                <p className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                   {STAGE_LABEL[m.stage as MatchStage]}
                   {m.group ? ` · Grupo ${m.group}` : ""}
+                  {m.status === "LIVE" && (
+                    <span className="flex items-center gap-1 font-semibold text-primary">
+                      <Wifi className="h-3 w-3 animate-pulse" /> AO VIVO
+                    </span>
+                  )}
+                  {m.status === "SCHEDULED" && (
+                    <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                      <Clock className="h-3 w-3" /> Começa às{" "}
+                      {new Date(m.kickoffAt).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
                 </p>
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <Flag countryCode={m.home.countryCode} name={m.home.name} size={22} />
                   <span className="truncate">{m.home.name}</span>
                   <span className="mx-1 shrink-0 tabular-nums text-foreground">
-                    {m.homeScore} <span className="text-muted-foreground">×</span> {m.awayScore}
+                    {m.homeScore ?? ""} <span className="text-muted-foreground">×</span>{" "}
+                    {m.awayScore ?? ""}
                   </span>
                   <span className="truncate">{m.away.name}</span>
                   <Flag countryCode={m.away.countryCode} name={m.away.name} size={22} />
@@ -82,7 +98,13 @@ export function ConfrontoList({
       <Dialog
         open={open !== null}
         onClose={() => setOpen(null)}
-        title={open ? `${open.home.name} ${open.homeScore} × ${open.awayScore} ${open.away.name}` : ""}
+        title={
+          open
+            ? open.homeScore != null
+              ? `${open.home.name} ${open.homeScore} × ${open.awayScore} ${open.away.name}`
+              : `${open.home.name} × ${open.away.name}`
+            : ""
+        }
         description="Palpites dos participantes"
       >
         {pending && (

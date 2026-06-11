@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 import { getPoolBySlug } from "@/server/services/pool";
 import { getRanking } from "@/server/services/ranking";
 import { getFeed } from "@/server/services/feed";
-import { getFinishedMatchups } from "@/server/services/matchups";
+import { getRevealedMatchups } from "@/server/services/matchups";
 import { RankingTable } from "@/components/pool/ranking-table";
 import { FeedList } from "@/components/pool/feed-list";
 import { ConfrontoList } from "@/components/pool/confronto-list";
@@ -111,7 +111,7 @@ async function FeedSection({ poolId }: { poolId: string }) {
 }
 
 async function ConfrontoSection({ poolId }: { poolId: string }) {
-  const matches = await getFinishedMatchups(poolId);
+  const matches = await getRevealedMatchups(poolId);
   return <ConfrontoList poolId={poolId} matches={matches} />;
 }
 

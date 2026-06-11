@@ -1,8 +1,9 @@
 // Montagem das linhas de "Confronto": dado o conjunto de participantes do bolão
-// e os palpites de um jogo já finalizado, produz uma lista ordenada para exibir
-// quem palpitou o quê e quanto pontuou. Função PURA — sem banco — para ser
-// testável e reutilizável. A pontuação vem de Bet.pointsEarned (servidor);
-// aqui só ordenamos e classificamos o resultado para a UI.
+// e os palpites de um jogo revelado (10 min antes do início, ao vivo ou já
+// encerrado), produz uma lista ordenada para exibir quem palpitou o quê e
+// quanto pontuou. Função PURA — sem banco — para ser testável e reutilizável.
+// A pontuação vem de Bet.pointsEarned (servidor); aqui só ordenamos e
+// classificamos o resultado para a UI.
 
 import { classifyBet, type BetResult } from "@/lib/bet-result";
 import type { BotKind } from "@prisma/client";
@@ -40,11 +41,13 @@ export interface MatchupRow {
 /**
  * Ordena por pontos (desc); empate vai para placar exato primeiro e depois
  * nome (asc). Quem não palpitou aparece por último, ordenado por nome.
+ * `actual` é null quando o jogo ainda não tem placar (revelado antes de
+ * começar) — nesse caso não há classificação de resultado.
  */
 export function buildMatchupRows(
   members: MatchupMember[],
   bets: MatchupBet[],
-  actual: { home: number; away: number },
+  actual: { home: number; away: number } | null,
 ): MatchupRow[] {
   const byUser = new Map(bets.map((b) => [b.userId, b]));
 
@@ -64,10 +67,12 @@ export function buildMatchupRows(
       ...base,
       guess: { home: bet.homeGuess, away: bet.awayGuess },
       points: bet.pointsEarned,
-      result: classifyBet(
-        { home: bet.homeGuess, away: bet.awayGuess },
-        { home: actual.home, away: actual.away, finished: true },
-      ),
+      result: actual
+        ? classifyBet(
+            { home: bet.homeGuess, away: bet.awayGuess },
+            { home: actual.home, away: actual.away, finished: true },
+          )
+        : null,
     };
   });
 
