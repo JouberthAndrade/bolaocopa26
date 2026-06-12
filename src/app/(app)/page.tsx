@@ -7,7 +7,7 @@ import {
   getTournamentTeams,
 } from "@/server/services/matches";
 import { getBonusStatus } from "@/server/services/bonus";
-import { GroupMatchesAccordion } from "@/components/match/group-matches-accordion";
+import { MatchesExplorer } from "@/components/match/matches-explorer";
 import { PendingBonus } from "@/components/bonus/pending-bonus";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { PoolSelector } from "@/components/pool/pool-selector";
@@ -107,7 +107,7 @@ export default async function HomePage({
           </CardContent>
         </Card>
       ) : (
-        <GroupMatchesAccordion matches={matches} poolId={selected.id} />
+        <MatchesExplorer matches={matches} poolId={selected.id} />
       )}
     </div>
   );

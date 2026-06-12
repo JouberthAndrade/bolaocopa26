@@ -50,29 +50,7 @@ export function GroupMatchesAccordion({
   matches: MatchWithBet[];
   poolId: string;
 }) {
-  // Rodadas disponíveis (fase de grupos: 1, 2, 3), em ordem crescente.
-  const rounds = useMemo(() => {
-    const set = new Set<number>();
-    for (const m of matches) {
-      if (m.matchday != null) set.add(m.matchday);
-    }
-    return [...set].sort((a, b) => a - b);
-  }, [matches]);
-
-  // Rodada selecionada (null = todas as rodadas).
-  const [round, setRound] = useState<number | null>(null);
-  const activeRound = round != null && rounds.includes(round) ? round : null;
-
-  // Aplica o filtro de rodada antes de agrupar por grupo.
-  const filtered = useMemo(
-    () =>
-      activeRound == null
-        ? matches
-        : matches.filter((m) => m.matchday === activeRound),
-    [matches, activeRound],
-  );
-
-  const groups = useMemo(() => groupMatchesByGroup(filtered), [filtered]);
+  const groups = useMemo(() => groupMatchesByGroup(matches), [matches]);
   const groupKeys = useMemo(() => Object.keys(groups), [groups]);
 
   // Grupo selecionado (default: primeiro grupo com jogos) e estado do accordion.
@@ -133,65 +111,18 @@ export function GroupMatchesAccordion({
     [active, groupKeys, pick],
   );
 
-  const activeMatches = active ? groups[active] : [];
-
-  // Filtro de rodada — renderizado mesmo quando o grupo atual fica vazio.
-  const roundFilter = rounds.length > 1 && (
-    <div
-      role="group"
-      aria-label="Filtrar por rodada"
-      className="flex items-center gap-2"
-    >
-      <span className="text-xs font-medium text-muted-foreground">Rodada</span>
-      <div className="flex gap-1 rounded-full border border-border bg-card p-1">
-        <button
-          type="button"
-          aria-pressed={activeRound == null}
-          onClick={() => setRound(null)}
-          className={cn(
-            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-            activeRound == null
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Todas
-        </button>
-        {rounds.map((r) => (
-          <button
-            key={r}
-            type="button"
-            aria-pressed={activeRound === r}
-            onClick={() => setRound(r)}
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-semibold tabular-nums transition-colors",
-              activeRound === r
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   if (groupKeys.length === 0) {
     return (
-      <div className="space-y-4">
-        {roundFilter}
-        <div className="rounded-2xl border border-border bg-card py-10 text-center text-sm text-muted-foreground">
-          Nenhum jogo de fase de grupos disponível ainda.
-        </div>
+      <div className="rounded-2xl border border-border bg-card py-10 text-center text-sm text-muted-foreground">
+        Nenhum jogo de fase de grupos disponível ainda.
       </div>
     );
   }
 
+  const activeMatches = active ? groups[active] : [];
+
   return (
     <div className="space-y-4">
-      {roundFilter}
-
       {/* Seletor horizontal de grupos: setas (desktop) + fade + scroll/swipe */}
       <div className="relative">
         {/* Fade + seta esquerda */}
