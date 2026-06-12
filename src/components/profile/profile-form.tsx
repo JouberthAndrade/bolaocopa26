@@ -38,6 +38,7 @@ export function ProfileForm({
 
   async function saveProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setMsg(null);
     const f = new FormData(e.currentTarget);
     const res = await updateProfile({ name: f.get("name"), image: currentImage });
     setMsg(res.ok ? "Perfil atualizado!" : res.error);
@@ -46,6 +47,7 @@ export function ProfileForm({
 
   async function savePassword(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setPwdMsg(null);
     const f = new FormData(e.currentTarget);
     const res = await changePassword({
       currentPassword: f.get("currentPassword"),
