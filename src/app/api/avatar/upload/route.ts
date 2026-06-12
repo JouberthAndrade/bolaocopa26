@@ -43,7 +43,10 @@ export async function POST(req: Request) {
   const pathname = `avatars/${userId}/${Date.now()}.${ext}`;
 
   try {
-    const blob = await put(pathname, file, { access: "public" });
+    const blob = await put(pathname, file, {
+      access: "public",
+      allowedContentTypes: ALLOWED_TYPES,
+    });
 
     await db.user.update({
       where: { id: userId },
