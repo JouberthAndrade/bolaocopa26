@@ -5,10 +5,12 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getPoolBySlug } from "@/server/services/pool";
 import { getRanking } from "@/server/services/ranking";
+import { getRaceData } from "@/server/services/race";
 import { getRevealedMatchups } from "@/server/services/matchups";
 import { getBonusMatchup } from "@/server/services/bonus";
 import { BonusMatchup } from "@/components/bonus/bonus-matchup";
 import { RankingTable } from "@/components/pool/ranking-table";
+import { RaceTrack } from "@/components/pool/race-track";
 import { ConfrontoList } from "@/components/pool/confronto-list";
 import { InviteCard } from "@/components/pool/invite-card";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -99,8 +101,15 @@ export default async function PoolPage({
 }
 
 async function RankingSection({ poolId, userId }: { poolId: string; userId: string }) {
-  const rows = await getRanking(poolId);
-  return <RankingTable rows={rows} currentUserId={userId} />;
+  const [rows, race] = await Promise.all([getRanking(poolId), getRaceData(poolId)]);
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] lg:items-start">
+      {/* Esquerda: ranking (inalterado) */}
+      <RankingTable rows={rows} currentUserId={userId} />
+      {/* Direita: corrida pelo prêmio */}
+      <RaceTrack data={race} currentUserId={userId} />
+    </div>
+  );
 }
 
 async function ConfrontoSection({ poolId }: { poolId: string }) {
