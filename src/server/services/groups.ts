@@ -52,6 +52,7 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
     status: m.status,
     stage: m.stage,
     group: m.group,
+    matchday: m.matchday,
     venue: m.venue,
     homeScore: m.homeScore,
     awayScore: m.awayScore,

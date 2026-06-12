@@ -16,6 +16,7 @@ export interface ProviderMatch {
   awayScore: number | null;
   stage: MatchStage;
   group?: string | null;
+  matchday?: number | null; // rodada (fase de grupos: 1, 2 ou 3)
   venue?: string | null;
   kickoffAt: Date;
   status: MatchStatus;

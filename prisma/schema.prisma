@@ -218,6 +218,7 @@ model Match {
   awayScore    Int?
   stage        MatchStage  @default(GROUP)
   group        String?
+  matchday     Int? // rodada (fase de grupos: 1, 2 ou 3)
   venue        String?
   kickoffAt    DateTime
   lockAt       DateTime // kickoff - 20min (calculado na escrita)
@@ -232,6 +233,7 @@ model Match {
   @@index([kickoffAt])
   @@index([status])
   @@index([lockAt])
+  @@index([group, matchday]) // filtro por grupo + rodada na listagem
 }
 
 model Bet {
