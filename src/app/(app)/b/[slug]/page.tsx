@@ -105,7 +105,7 @@ async function RankingSection({ poolId, userId }: { poolId: string; userId: stri
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] lg:items-start">
       {/* Esquerda: ranking (inalterado) */}
-      <RankingTable rows={rows} currentUserId={userId} />
+      <RankingTable rows={rows} currentUserId={userId} poolId={poolId} />
       {/* Direita: corrida pelo prêmio */}
       <RaceTrack data={race} currentUserId={userId} />
     </div>
