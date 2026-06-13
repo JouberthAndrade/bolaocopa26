@@ -63,10 +63,6 @@ export function RankingTable({
     return <p className="text-sm text-muted-foreground">Sem participantes ainda.</p>;
   }
 
-  const totalPoints = bets?.reduce((sum, b) => sum + (b.pointsEarned ?? 0), 0) ?? 0;
-  const hits = bets?.filter((b) => (b.pointsEarned ?? 0) > 0).length ?? 0;
-  const misses = bets?.filter((b) => (b.pointsEarned ?? 0) === 0).length ?? 0;
-
   return (
     <>
       <div className="space-y-2">
@@ -159,11 +155,11 @@ export function RankingTable({
         })}
       </div>
 
-      {selectedUser && (
-        <Dialog
-          open={!!selectedUser}
-          onClose={handleClose}
-          title={
+      <Dialog
+        open={!!selectedUser}
+        onClose={handleClose}
+        title={
+          selectedUser ? (
             <div className="flex items-center gap-2">
               {selectedUser.image ? (
                 <Image
@@ -180,26 +176,31 @@ export function RankingTable({
               )}
               <span>{selectedUser.name}</span>
             </div>
-          }
-          description="Jogos fechados com palpite"
-        >
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          )}
+          ) : undefined
+        }
+        description="Jogos fechados com palpite"
+      >
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
 
-          {error && (
-            <p className="text-center text-sm text-destructive">{error}</p>
-          )}
+        {error && (
+          <p className="text-center text-sm text-destructive">{error}</p>
+        )}
 
-          {!loading && !error && bets?.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground">
-              Nenhum jogo finalizado com palpite ainda.
-            </p>
-          )}
+        {!loading && !error && bets?.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground">
+            Nenhum jogo finalizado com palpite ainda.
+          </p>
+        )}
 
-          {!loading && !error && bets && bets.length > 0 && (
+        {!loading && !error && bets && bets.length > 0 && (() => {
+          const totalPoints = bets.reduce((sum, b) => sum + (b.pointsEarned ?? 0), 0);
+          const hits = bets.filter((b) => (b.pointsEarned ?? 0) > 0).length;
+          const misses = bets.filter((b) => (b.pointsEarned ?? 0) === 0).length;
+          return (
             <>
               <div className="space-y-2">
                 {bets.map((b) => (
@@ -257,9 +258,9 @@ export function RankingTable({
                 <span className="font-bold text-foreground">{totalPoints} pts</span>
               </div>
             </>
-          )}
-        </Dialog>
-      )}
+          );
+        })()}
+      </Dialog>
     </>
   );
 }
