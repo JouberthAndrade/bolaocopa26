@@ -45,7 +45,6 @@ export async function POST(req: Request) {
   try {
     const blob = await put(pathname, file, {
       access: "public",
-      allowedContentTypes: ALLOWED_TYPES,
     });
 
     await db.user.update({
