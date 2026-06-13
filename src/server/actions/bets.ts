@@ -97,7 +97,7 @@ export interface UserBetRow {
   awayScore: number | null;
   homeGuess: number;
   awayGuess: number;
-  pointsEarned: number;
+  pointsEarned: number | null;
 }
 
 /**
@@ -108,6 +108,7 @@ export async function getUserBetsInPool(
   targetUserId: string,
   poolId: string,
 ): Promise<ActionResult<UserBetRow[]>> {
+  if (!targetUserId || !poolId) return { ok: false, error: "Parâmetros inválidos" };
   const callerId = await requireUserId();
   await requireMembership(poolId, callerId);
 
