@@ -64,6 +64,7 @@ interface FDMatch {
   status: string;
   stage: string;
   group: string | null;
+  matchday: number | null;
   homeTeam: { id: number | null };
   awayTeam: { id: number | null };
   score: { fullTime: { home: number | null; away: number | null } };
@@ -119,6 +120,7 @@ export class FootballDataProvider implements FootballProvider {
         stage: mapStage(m.stage),
         // Limpa o prefixo "GROUP_" já na origem → o banco grava "A", "B", …
         group: m.group ? normalizeGroup(m.group) : null,
+        matchday: m.matchday ?? null,
         venue: m.venue ?? null,
         kickoffAt: new Date(m.utcDate),
         status: mapStatus(m.status),

@@ -91,38 +91,43 @@ export async function syncFromProvider() {
       where: { externalId: m.externalId },
       select: { status: true },
     });
+    // Jogo já finalizado é autoritativo: nunca sobrescrevemos placar/status.
+    // Isso protege resultados lançados manualmente (admin/set-result, usado
+    // quando o provedor marca FINISHED mas vem sem placar) e a pontuação já
+    // calculada do bolão — um novo sync não reverte nem zera nada disso.
+    const alreadyFinished = existing?.status === "FINISHED";
+
+    // Metadados seguros de atualizar em qualquer estado do jogo.
+    const meta = {
+      homeTeamId,
+      awayTeamId,
+      stage: m.stage,
+      group: m.group ?? undefined,
+      matchday: m.matchday ?? undefined,
+      venue: m.venue ?? undefined,
+      kickoffAt: m.kickoffAt,
+      lockAt,
+    };
+
+    // Campos de resultado: só entram quando o jogo ainda NÃO está finalizado.
+    const result = {
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      status: m.status,
+    };
 
     await db.match.upsert({
       where: { externalId: m.externalId },
-      update: {
-        homeTeamId,
-        awayTeamId,
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
-        stage: m.stage,
-        group: m.group ?? undefined,
-        venue: m.venue ?? undefined,
-        kickoffAt: m.kickoffAt,
-        lockAt,
-        status: m.status,
-      },
+      update: alreadyFinished ? meta : { ...meta, ...result },
       create: {
         externalId: m.externalId,
         tournamentId,
-        homeTeamId,
-        awayTeamId,
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
-        stage: m.stage,
-        group: m.group ?? undefined,
-        venue: m.venue ?? undefined,
-        kickoffAt: m.kickoffAt,
-        lockAt,
-        status: m.status,
+        ...meta,
+        ...result,
       },
     });
     upserted++;
-    if (existing?.status !== "FINISHED" && m.status === "FINISHED") newlyFinished++;
+    if (!alreadyFinished && m.status === "FINISHED") newlyFinished++;
   }
 
   return { teams: providerTeams.length, matches: upserted, newlyFinished };
