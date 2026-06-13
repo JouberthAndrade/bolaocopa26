@@ -85,3 +85,70 @@ export async function upsertChampionBet(input: unknown): Promise<ActionResult> {
 
   return { ok: true, data: undefined };
 }
+
+export interface UserBetRow {
+  matchId: string;
+  kickoffAt: Date;
+  homeName: string;
+  homeCode: string;
+  awayName: string;
+  awayCode: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  homeGuess: number;
+  awayGuess: number;
+  pointsEarned: number;
+}
+
+/**
+ * Retorna os palpites fechados de qualquer membro do bolão.
+ * Requer que o caller seja membro do mesmo bolão.
+ */
+export async function getUserBetsInPool(
+  targetUserId: string,
+  poolId: string,
+): Promise<ActionResult<UserBetRow[]>> {
+  const callerId = await requireUserId();
+  await requireMembership(poolId, callerId);
+
+  const bets = await db.bet.findMany({
+    where: {
+      userId: targetUserId,
+      poolId,
+      match: { status: "FINISHED" },
+    },
+    orderBy: { match: { kickoffAt: "desc" } },
+    select: {
+      homeGuess: true,
+      awayGuess: true,
+      pointsEarned: true,
+      match: {
+        select: {
+          id: true,
+          kickoffAt: true,
+          homeScore: true,
+          awayScore: true,
+          homeTeam: { select: { name: true, countryCode: true } },
+          awayTeam: { select: { name: true, countryCode: true } },
+        },
+      },
+    },
+  });
+
+  return {
+    ok: true,
+    data: bets.map((b) => ({
+      matchId: b.match.id,
+      kickoffAt: b.match.kickoffAt,
+      homeName: b.match.homeTeam.name,
+      homeCode: b.match.homeTeam.countryCode,
+      awayName: b.match.awayTeam.name,
+      awayCode: b.match.awayTeam.countryCode,
+      homeScore: b.match.homeScore,
+      awayScore: b.match.awayScore,
+      homeGuess: b.homeGuess,
+      awayGuess: b.awayGuess,
+      pointsEarned: b.pointsEarned,
+    })),
+  };
+}
