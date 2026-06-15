@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/", label: "Jogos", icon: ListChecks },
   { href: "/calendar", label: "Agenda", icon: CalendarDays },
-  { href: "/extrato", label: "Ranking", icon: ListOrdered },
+  { href: "/b", label: "Ranking", icon: ListOrdered },
   { href: "/confronto", label: "Confronto", icon: Eye },
   { href: "/groups", label: "Grupos", icon: LayoutGrid },
   { href: "/knockout", label: "Mata-mata", icon: Swords },
