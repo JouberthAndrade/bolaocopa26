@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListChecks, CalendarDays, Receipt, Eye, LayoutGrid, Swords, Trophy, User } from "lucide-react";
+import { ListChecks, CalendarDays, ListOrdered, Eye, LayoutGrid, Swords, Trophy, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/", label: "Jogos", icon: ListChecks },
   { href: "/calendar", label: "Agenda", icon: CalendarDays },
-  { href: "/extrato", label: "Extrato", icon: Receipt },
+  { href: "/extrato", label: "Ranking", icon: ListOrdered },
   { href: "/confronto", label: "Confronto", icon: Eye },
   { href: "/groups", label: "Grupos", icon: LayoutGrid },
   { href: "/knockout", label: "Mata-mata", icon: Swords },

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CalendarRange, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { CalendarRange, LayoutGrid, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { MatchCard } from "@/components/match/match-card";
 import { GroupMatchesAccordion } from "@/components/match/group-matches-accordion";
 import { cn } from "@/lib/utils";
@@ -194,7 +194,18 @@ function RoundList({
   matches: MatchWithBet[];
   poolId: string;
 }) {
-  const days = useMemo(() => groupByDay(matches), [matches]);
+  // Separa abertos (palpitáveis/ao vivo) dos encerrados, preservando a ordem.
+  // Os abertos ficam à mostra; os encerrados vão para um accordion fechado.
+  const { open, finished } = useMemo(() => {
+    const open: MatchWithBet[] = [];
+    const finished: MatchWithBet[] = [];
+    for (const m of matches) {
+      (m.status === "FINISHED" ? finished : open).push(m);
+    }
+    return { open, finished };
+  }, [matches]);
+
+  const openDays = useMemo(() => groupByDay(open), [open]);
 
   if (matches.length === 0) {
     return (
@@ -206,7 +217,7 @@ function RoundList({
 
   return (
     <div className="space-y-5">
-      {days.map((day) => (
+      {openDays.map((day) => (
         <section key={day.key} className="space-y-3">
           <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {day.label}
@@ -218,6 +229,77 @@ function RoundList({
           </div>
         </section>
       ))}
+
+      {open.length === 0 && (
+        <div className="rounded-2xl border border-border bg-card py-6 text-center text-sm text-muted-foreground">
+          Todos os jogos desta rodada já foram encerrados.
+        </div>
+      )}
+
+      {finished.length > 0 && (
+        <FinishedMatchesAccordion matches={finished} poolId={poolId} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Agrupa os jogos encerrados da rodada num accordion fechado por padrão, para
+ * limpar a tela e destacar os jogos ainda abertos para palpite.
+ */
+function FinishedMatchesAccordion({
+  matches,
+  poolId,
+}: {
+  matches: MatchWithBet[];
+  poolId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const days = useMemo(() => groupByDay(matches), [matches]);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-sm font-bold">
+          Jogos encerrados
+          <span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">
+            {matches.length}
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 text-muted-foreground transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        hidden={!open}
+        className="space-y-5 border-t border-border p-4"
+      >
+        {days.map((day) => (
+          <section key={day.key} className="space-y-3">
+            <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {day.label}
+            </h3>
+            <div className="space-y-3">
+              {day.matches.map((m) => (
+                <MatchCard key={m.id} match={m} poolId={poolId} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
