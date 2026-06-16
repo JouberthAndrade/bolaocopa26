@@ -55,3 +55,26 @@ export function classifyBet(
 
   return { kind: "MISS", label: "Não pontuou", isDraw: false };
 }
+
+/** Campos da ScoringRule necessários para pontuar um palpite (sem bônus). */
+export interface ResultScoringRule {
+  pointsExactScore: number;
+  pointsCorrectResult: number;
+  pointsCorrectDraw: number;
+}
+
+/**
+ * Pontos de um BetResult conforme a regra do bolão — espelha
+ * computeBetPoints (servidor), mas PURO e sem dependência de banco, para
+ * pontuar provisoriamente no client enquanto o jogo está em andamento.
+ */
+export function pointsForResult(
+  result: BetResult | null | undefined,
+  rule: ResultScoringRule,
+): number {
+  if (!result) return 0;
+  const base = result.isDraw ? rule.pointsCorrectDraw : rule.pointsCorrectResult;
+  if (result.kind === "EXACT") return base + rule.pointsExactScore;
+  if (result.kind === "RESULT") return base;
+  return 0;
+}

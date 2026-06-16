@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   buildMatchupRows,
   splitBotRows,
+  withProvisionalPoints,
   type MatchupMember,
   type MatchupBet,
 } from "./matchup";
+import type { ResultScoringRule } from "./bet-result";
 
 const members: MatchupMember[] = [
   { userId: "ana", name: "Ana", image: null },
@@ -76,6 +78,42 @@ describe("buildMatchupRows", () => {
     expect(byId.ana.result?.kind).toBe("EXACT");
     expect(byId.bruno.result?.kind).toBe("RESULT");
     expect(byId.carla.result?.kind).toBe("MISS");
+  });
+});
+
+describe("withProvisionalPoints", () => {
+  const rule: ResultScoringRule = {
+    pointsExactScore: 1,
+    pointsCorrectResult: 2,
+    pointsCorrectDraw: 2,
+  };
+
+  it("pontua ao vivo mesmo com pointsEarned ainda zerado no servidor", () => {
+    // Jogo em andamento empatado 0 x 0: pointsEarned não foi persistido (0).
+    const live = { home: 0, away: 0 };
+    const bets: MatchupBet[] = [
+      { userId: "ana", homeGuess: 0, awayGuess: 0, pointsEarned: 0 }, // exato (empate)
+      { userId: "bruno", homeGuess: 1, awayGuess: 1, pointsEarned: 0 }, // acertou empate
+      { userId: "carla", homeGuess: 2, awayGuess: 0, pointsEarned: 0 }, // errou
+    ];
+    const rows = withProvisionalPoints(
+      buildMatchupRows(members.slice(0, 3), bets, live),
+      rule,
+    );
+    const byId = Object.fromEntries(rows.map((r) => [r.userId, r]));
+    expect(byId.ana.points).toBe(3); // 2 (empate) + 1 (bônus exato)
+    expect(byId.bruno.points).toBe(2);
+    expect(byId.carla.points).toBe(0);
+    // reordena pelo placar provisório: exato primeiro
+    expect(rows.map((r) => r.userId)).toEqual(["ana", "bruno", "carla"]);
+  });
+
+  it("não pontua quem não palpitou nem palpite sem placar", () => {
+    const rows = withProvisionalPoints(
+      buildMatchupRows(members.slice(0, 2), [], null),
+      rule,
+    );
+    expect(rows.every((r) => r.points === 0)).toBe(true);
   });
 });
 

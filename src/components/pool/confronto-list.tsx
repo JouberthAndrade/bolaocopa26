@@ -8,7 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { STAGE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { loadMatchupDetail } from "@/server/actions/matchups";
-import { splitBotRows } from "@/lib/matchup";
+import { splitBotRows, withProvisionalPoints } from "@/lib/matchup";
 import type { ConfrontoMatch, MatchupDetail } from "@/server/services/matchups";
 import type { MatchupRow } from "@/lib/matchup";
 import type { BotKind, MatchStage } from "@prisma/client";
@@ -113,7 +113,18 @@ export function ConfrontoList({
         {error && !pending && (
           <p className="py-6 text-center text-sm text-destructive">{error}</p>
         )}
-        {detail && !pending && <MatchupRows rows={detail.rows} />}
+        {detail && !pending && (
+          <MatchupRows
+            rows={
+              // Jogo em andamento: pontua provisoriamente no client (Bet.pointsEarned
+              // só é persistido pelo servidor após o jogo encerrar). Encerrado: usa
+              // os pontos já persistidos.
+              detail.match.status === "FINISHED"
+                ? detail.rows
+                : withProvisionalPoints(detail.rows, detail.rule)
+            }
+          />
+        )}
       </Dialog>
     </>
   );

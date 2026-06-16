@@ -5,7 +5,12 @@
 // A pontuação vem de Bet.pointsEarned (servidor); aqui só ordenamos e
 // classificamos o resultado para a UI.
 
-import { classifyBet, type BetResult } from "@/lib/bet-result";
+import {
+  classifyBet,
+  pointsForResult,
+  type BetResult,
+  type ResultScoringRule,
+} from "@/lib/bet-result";
 import type { BotKind } from "@prisma/client";
 
 export interface MatchupMember {
@@ -76,24 +81,45 @@ export function buildMatchupRows(
     };
   });
 
+  return rows.sort(compareMatchupRows);
+}
+
+/**
+ * Ordena por pontos (desc); empate vai para placar exato primeiro e depois
+ * nome (asc). Quem não palpitou aparece por último, ordenado por nome.
+ */
+function compareMatchupRows(a: MatchupRow, b: MatchupRow): number {
   const nameOf = (r: MatchupRow) => (r.name ?? "").toLocaleLowerCase("pt-BR");
 
-  return rows.sort((a, b) => {
-    // não-palpitantes sempre por último
-    const aNone = a.guess === null;
-    const bNone = b.guess === null;
-    if (aNone !== bNone) return aNone ? 1 : -1;
-    if (aNone && bNone) return nameOf(a).localeCompare(nameOf(b), "pt-BR");
+  // não-palpitantes sempre por último
+  const aNone = a.guess === null;
+  const bNone = b.guess === null;
+  if (aNone !== bNone) return aNone ? 1 : -1;
+  if (aNone && bNone) return nameOf(a).localeCompare(nameOf(b), "pt-BR");
 
-    if (b.points !== a.points) return b.points - a.points;
+  if (b.points !== a.points) return b.points - a.points;
 
-    // desempate: placar exato primeiro
-    const aExact = a.result?.kind === "EXACT" ? 0 : 1;
-    const bExact = b.result?.kind === "EXACT" ? 0 : 1;
-    if (aExact !== bExact) return aExact - bExact;
+  // desempate: placar exato primeiro
+  const aExact = a.result?.kind === "EXACT" ? 0 : 1;
+  const bExact = b.result?.kind === "EXACT" ? 0 : 1;
+  if (aExact !== bExact) return aExact - bExact;
 
-    return nameOf(a).localeCompare(nameOf(b), "pt-BR");
-  });
+  return nameOf(a).localeCompare(nameOf(b), "pt-BR");
+}
+
+/**
+ * Pontuação PROVISÓRIA no client enquanto o jogo está em andamento: recalcula
+ * `points` de cada linha a partir do `result` já classificado e da regra do
+ * bolão (Bet.pointsEarned só é persistido pelo servidor após o jogo encerrar),
+ * e reordena pelo novo placar. Não toca no backend.
+ */
+export function withProvisionalPoints(
+  rows: MatchupRow[],
+  rule: ResultScoringRule,
+): MatchupRow[] {
+  return rows
+    .map((r) => ({ ...r, points: pointsForResult(r.result, rule) }))
+    .sort(compareMatchupRows);
 }
 
 /** Ordem fixa dos bots na seção de IA. */

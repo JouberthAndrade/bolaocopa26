@@ -2,6 +2,14 @@ import type { MatchStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { matchRevealAt, REVEAL_BEFORE_KICKOFF_MS } from "@/lib/constants";
 import { buildMatchupRows, type MatchupRow } from "@/lib/matchup";
+import type { ResultScoringRule } from "@/lib/bet-result";
+
+/** Regra padrão quando o bolão ainda não tem ScoringRule (mesmos defaults do schema). */
+const DEFAULT_SCORING_RULE: ResultScoringRule = {
+  pointsExactScore: 1,
+  pointsCorrectResult: 2,
+  pointsCorrectDraw: 2,
+};
 
 export interface ConfrontoMatch {
   id: string;
@@ -77,6 +85,8 @@ export interface MatchupDetail {
     away: { name: string; countryCode: string };
   };
   rows: MatchupRow[];
+  /** Regra de pontuação do bolão — usada para pontuar ao vivo no client. */
+  rule: ResultScoringRule;
 }
 
 /**
@@ -104,7 +114,7 @@ export async function getMatchupDetail(
   if (!match) return null;
   if (new Date() < matchRevealAt(match.kickoffAt, match.lockAt)) return null; // ainda não revela
 
-  const [memberships, bets] = await Promise.all([
+  const [memberships, bets, scoringRule] = await Promise.all([
     db.membership.findMany({
       where: { poolId },
       select: {
@@ -115,6 +125,14 @@ export async function getMatchupDetail(
     db.bet.findMany({
       where: { poolId, matchId },
       select: { userId: true, homeGuess: true, awayGuess: true, pointsEarned: true },
+    }),
+    db.scoringRule.findUnique({
+      where: { poolId },
+      select: {
+        pointsExactScore: true,
+        pointsCorrectResult: true,
+        pointsCorrectDraw: true,
+      },
     }),
   ]);
 
@@ -143,5 +161,6 @@ export async function getMatchupDetail(
       away: match.awayTeam,
     },
     rows,
+    rule: scoringRule ?? DEFAULT_SCORING_RULE,
   };
 }
