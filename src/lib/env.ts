@@ -11,10 +11,7 @@ const envSchema = z.object({
   AUTH_GOOGLE_SECRET: z.string().optional(),
   FOOTBALL_DATA_TOKEN: z.string().min(1),
   FOOTBALL_DATA_COMPETITION_ID: z.string().default("2000"),
-  // API-Sports (api-sports.io) — placar ao vivo. Opcional: sem a chave, a rota
-  // /api/cron/live-score responde 500 explicando, sem quebrar o boot do app.
-  API_SPORTS_KEY: z.string().optional(),
-  API_SPORTS_LEAGUE_ID: z.string().default("1"), // World Cup
+  // Placar ao vivo usa a API pública da ESPN (sem chave / sem quota).
   CRON_SECRET: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   // A Copa começa em 12/06/2026; o polling só faz sentido a partir do dia 11.
@@ -33,8 +30,6 @@ export const env = envSchema.parse({
   AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
   FOOTBALL_DATA_TOKEN: process.env.FOOTBALL_DATA_TOKEN,
   FOOTBALL_DATA_COMPETITION_ID: process.env.FOOTBALL_DATA_COMPETITION_ID,
-  API_SPORTS_KEY: process.env.API_SPORTS_KEY,
-  API_SPORTS_LEAGUE_ID: process.env.API_SPORTS_LEAGUE_ID,
   CRON_SECRET: process.env.CRON_SECRET,
   NEXT_PUBLIC_APP_URL:
     process.env.NEXT_PUBLIC_APP_URL ??

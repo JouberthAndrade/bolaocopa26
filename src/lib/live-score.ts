@@ -1,14 +1,14 @@
-// Núcleo do "de-para" entre a API-Sports (api-sports.io) e os jogos do banco —
-// função PURA, sem rede nem banco, para ser testável. A API-Sports devolve
-// nomes de seleção em inglês ("Mexico", "South Africa"); nós casamos por código
+// Núcleo do "de-para" entre o provedor de placar ao vivo (ESPN) e os jogos do
+// banco — função PURA, sem rede nem banco, para ser testável. A ESPN devolve
+// nomes de seleção em inglês ("France", "Senegal"); nós casamos por código
 // ISO (Team.countryCode), igual ao resto do app. Aqui só decidimos QUAIS jogos
 // atualizar e com qual placar — a escrita fica no serviço.
 
 import { teamCode } from "@/lib/team-name";
 
-/** Fixture de placar ao vivo, já extraído da resposta da API-Sports. */
+/** Fixture de placar ao vivo, já extraído da resposta da ESPN. */
 export interface LiveFixture {
-  /** id da fixture na API-Sports (só para log/diagnóstico) */
+  /** id do evento na ESPN (só para log/diagnóstico) */
   fixtureId: number;
   homeName: string;
   awayName: string;

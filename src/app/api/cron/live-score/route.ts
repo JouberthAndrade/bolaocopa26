@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * Atualização de placar AO VIVO via API-Sports (api-sports.io).
- * Disparado por cron externo (cron-job.org). Faz 1 request por chamada —
- * configure a cadência respeitando o limite de 10 req/min do plano free.
+ * Atualização de placar AO VIVO via API pública da ESPN.
+ * Disparado por cron externo (cron-job.org). Faz 1 request por chamada
+ * (sem chave / sem limite de quota).
  *
  * Só atualiza placar e status LIVE; NÃO finaliza jogos nem pontua o bolão
  * (isso fica com o cron de sync+score).
