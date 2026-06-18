@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Goal } from "lucide-react";
+import { Flag } from "@/components/flag";
+import { teamCode } from "@/lib/team-name";
+import { countryNamePtBR } from "@/lib/country-codes";
 import { cn } from "@/lib/utils";
 import type { TopScorerRow, TopScorersPayload } from "@/server/services/top-scorers";
 
@@ -81,6 +84,11 @@ export function TopScorers() {
 
 function ScorerRow({ row }: { row: TopScorerRow }) {
   const medal = MEDALS[row.position];
+  // ESPN devolve o nome da seleção em inglês ("Sweden"); aqui resolvemos para o
+  // ISO (bandeira via flagcdn) e para o nome em PT-BR ("Suécia"), pra bater com
+  // o resto do bolão. Sem match, cai no nome original.
+  const iso = teamCode(row.teamName);
+  const teamLabel = (iso && countryNamePtBR(iso)) || row.teamName;
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
       {/* Posição / medalha */}
@@ -108,17 +116,8 @@ function ScorerRow({ row }: { row: TopScorerRow }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{row.playerName}</p>
         <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-          {row.teamLogo && (
-            <Image
-              src={row.teamLogo}
-              alt={row.teamName}
-              width={16}
-              height={16}
-              unoptimized
-              className="h-4 w-4 shrink-0 object-contain"
-            />
-          )}
-          <span className="truncate">{row.teamName || row.nationality}</span>
+          {iso && <Flag countryCode={iso} name={teamLabel} size={18} />}
+          <span className="truncate">{teamLabel}</span>
         </span>
       </div>
 
