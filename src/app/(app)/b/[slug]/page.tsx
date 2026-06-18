@@ -12,17 +12,19 @@ import { BonusMatchup } from "@/components/bonus/bonus-matchup";
 import { RankingTable } from "@/components/pool/ranking-table";
 import { RaceTrack } from "@/components/pool/race-track";
 import { ConfrontoList } from "@/components/pool/confronto-list";
+import { TopScorers } from "@/components/pool/top-scorers";
 import { InviteCard } from "@/components/pool/invite-card";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { formatCurrency, cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "ranking" | "confronto" | "regras";
+type Tab = "ranking" | "confronto" | "artilharia" | "regras";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "ranking", label: "Ranking" },
   { key: "confronto", label: "Confronto" },
+  { key: "artilharia", label: "Artilharia" },
   { key: "regras", label: "Regras" },
 ];
 
@@ -85,6 +87,7 @@ export default async function PoolPage({
 
       {tab === "ranking" && <RankingSection poolId={pool.id} userId={userId} />}
       {tab === "confronto" && <ConfrontoSection poolId={pool.id} />}
+      {tab === "artilharia" && <TopScorers />}
       {tab === "regras" && (
         <RulesSection
           pool={pool}

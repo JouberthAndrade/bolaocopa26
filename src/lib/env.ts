@@ -11,7 +11,7 @@ const envSchema = z.object({
   AUTH_GOOGLE_SECRET: z.string().optional(),
   FOOTBALL_DATA_TOKEN: z.string().min(1),
   FOOTBALL_DATA_COMPETITION_ID: z.string().default("2000"),
-  // Placar ao vivo usa a API pública da ESPN (sem chave / sem quota).
+  // Placar ao vivo e artilharia usam páginas públicas da ESPN (sem chave/quota).
   CRON_SECRET: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   // A Copa começa em 12/06/2026; o polling só faz sentido a partir do dia 11.

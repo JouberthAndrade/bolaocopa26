@@ -293,3 +293,27 @@ model FeedEvent {
 
   @@index([poolId, createdAt(sort: Desc)])
 }
+
+// ─────────────────────────── ARTILHARIA ───────────────────────────
+
+// Top marcadores da Copa. A cada sync o cron faz UPSERT por `externalId` (id
+// estável do jogador na fonte): jogador já existente tem o registro atualizado
+// (gols/partidas mudam ao longo do torneio); jogador novo é inserido; quem saiu
+// do top N é removido. A tela lê direto daqui, ordenado por `position`.
+model TopScorer {
+  id          Int      @id @default(autoincrement())
+  externalId  String   @unique // id estável do jogador na fonte (ESPN uid)
+  playerName  String
+  playerPhoto String
+  teamName    String
+  teamLogo    String
+  nationality String
+  goals       Int
+  assists     Int
+  appearances Int
+  position    Int // ranking (1, 2, 3...)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([position])
+}

@@ -46,6 +46,28 @@ Em produção, o Vercel Cron chama `/api/cron/sync-matches` (a cada 15 min) e
 `/api/cron/score` (a cada 10 min) automaticamente — ver [vercel.json](vercel.json).
 Os endpoints exigem o header `Authorization: Bearer $CRON_SECRET`.
 
+## Configuração do Cron (Artilharia)
+
+A aba **Artilharia** é alimentada pelo endpoint `POST /api/cron/sync-scorers`,
+que faz scraping da página pública da ESPN (top scorers + top assists da Copa) e
+regrava a tabela `TopScorer`. A tela lê sempre do banco (`GET /api/top-scorers`)
+— nunca acessa a ESPN. Não requer chave de API.
+
+Configure um job em [cron-job.org](https://cron-job.org/en/):
+
+| Campo | Valor |
+|---|---|
+| URL | `https://SEU_DOMINIO/api/cron/sync-scorers` |
+| Método | `POST` |
+| Header | `Authorization: Bearer ${CRON_SECRET}` |
+| Schedule | 4x/dia — `14:00`, `16:00`, `20:00`, `01:00` BRT (= `17:00`, `19:00`, `23:00`, `04:00` UTC) |
+
+No cron-job.org, defina o fuso do job como `America/Sao_Paulo` e selecione as
+horas 14/16/20/01; ou deixe em UTC e use 17/19/23/04. Cron equivalente:
+`0 14,16,20,1 * * *` (São Paulo) ou `0 17,19,23,4 * * *` (UTC).
+
+Única variável necessária: `CRON_SECRET` (gere com `openssl rand -hex 32`).
+
 ## Scripts
 
 | Comando | Descrição |
@@ -56,6 +78,7 @@ Os endpoints exigem o header `Authorization: Bearer $CRON_SECRET`.
 | `npm run db:seed` | Popula dados demo |
 | `npm run db:studio` | Prisma Studio |
 | `npm run sync:matches` | Sincroniza jogos da Football-Data |
+| `npm run db:migrate` | Cria/aplica migrations Prisma (dev) |
 | `npm run typecheck` | Checagem de tipos |
 
 ## Estrutura
