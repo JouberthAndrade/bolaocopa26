@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Sincroniza a artilharia da Copa a partir da API-Football.
- * Disparado por cron externo (cron-job.org), 3x/dia.
+ * Sincroniza a artilharia da Copa a partir da football-data.org.
+ * Disparado por cron externo (cron-job.org), 4x/dia.
  *
  * Protegido por `Authorization: Bearer <CRON_SECRET>`. Em erro na API externa
  * devolve 500 sem apagar os dados já existentes.
