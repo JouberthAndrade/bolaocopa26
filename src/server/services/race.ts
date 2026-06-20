@@ -14,6 +14,9 @@ export interface RaceMatch {
   matchday: number | null; // rodada da fase de grupos (1, 2, 3)
   stage: MatchStage;
   kickoffAt: string; // ISO — o agrupamento por dia é feito no cliente (fuso local)
+  /** códigos ISO dos times — usados no rótulo do checkpoint "Jogo" (ex.: TUR × PAR) */
+  homeCode: string;
+  awayCode: string;
   /** pontos que cada participante fez NESTE jogo (userId -> pontos) */
   points: Record<string, number>;
 }
@@ -64,6 +67,8 @@ export async function getRaceData(poolId: string): Promise<RaceData> {
         matchday: true,
         stage: true,
         kickoffAt: true,
+        homeTeam: { select: { countryCode: true } },
+        awayTeam: { select: { countryCode: true } },
         bets: { where: { poolId }, select: { userId: true, pointsEarned: true } },
       },
     }),
@@ -88,6 +93,8 @@ export async function getRaceData(poolId: string): Promise<RaceData> {
       matchday: m.matchday,
       stage: m.stage,
       kickoffAt: m.kickoffAt.toISOString(),
+      homeCode: m.homeTeam.countryCode,
+      awayCode: m.awayTeam.countryCode,
       points: Object.fromEntries(m.bets.map((b) => [b.userId, b.pointsEarned])),
     })),
   };

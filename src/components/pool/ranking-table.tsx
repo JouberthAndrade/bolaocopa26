@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Flag } from "@/components/flag";
@@ -35,6 +37,7 @@ export function RankingTable({
   const [bets, setBets] = useState<UserBetRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reduce = useReducedMotion();
 
   const handleRowClick = useCallback(
     async (user: SelectedUser) => {
@@ -65,14 +68,17 @@ export function RankingTable({
 
   return (
     <>
+      <LayoutGroup>
       <div className="space-y-2">
         {rows.map((r) => {
           const isMe = r.userId === currentUserId;
           const hasMedal = r.position <= 3;
 
           return (
-            <div
+            <motion.div
               key={r.userId}
+              layout={reduce ? false : "position"}
+              transition={{ type: "spring", stiffness: 500, damping: 42 }}
               role="button"
               tabIndex={0}
               onClick={() =>
@@ -94,9 +100,11 @@ export function RankingTable({
               }}
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-secondary/40",
-                isMe
-                  ? "border-primary/40 bg-primary/10"
-                  : "border-border bg-card",
+                r.isLive
+                  ? "border-primary/50 bg-primary/5 ring-1 ring-primary/30"
+                  : isMe
+                    ? "border-primary/40 bg-primary/10"
+                    : "border-border bg-card",
               )}
             >
               {/* Posição */}
@@ -132,9 +140,17 @@ export function RankingTable({
                   {r.name ?? "Anônimo"}
                   {isMe && <span className="ml-1 text-xs font-normal">(você)</span>}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {r.hits} acerto{r.hits !== 1 ? "s" : ""} · {r.misses} erro
-                  {r.misses !== 1 ? "s" : ""}
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span>
+                    {r.hits} acerto{r.hits !== 1 ? "s" : ""} · {r.misses} erro
+                    {r.misses !== 1 ? "s" : ""}
+                  </span>
+                  {r.isLive && (
+                    <span className="flex items-center gap-0.5 font-semibold text-primary">
+                      <Wifi className="h-3 w-3 animate-pulse" />
+                      +{r.livePoints} ao vivo
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -143,17 +159,18 @@ export function RankingTable({
                 <p
                   className={cn(
                     "text-lg font-bold tabular-nums",
-                    hasMedal && "text-accent",
+                    r.isLive ? "text-primary" : hasMedal && "text-accent",
                   )}
                 >
                   {r.totalPoints}
                 </p>
                 <p className="text-xs text-muted-foreground">pts</p>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
+      </LayoutGroup>
 
       <Dialog
         open={!!selectedUser}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import {
   Trophy,
   Play,
@@ -10,21 +11,13 @@ import {
   ChevronRight,
   CalendarRange,
   ListOrdered,
+  Swords,
   Crown,
   Bot,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import { STAGE_LABEL } from "@/lib/labels";
-import type { RaceData, RaceMatch, RaceParticipant } from "@/server/services/race";
-
-type Mode = "round" | "day";
-
-interface Checkpoint {
-  key: string;
-  label: string;
-  /** índice do último jogo (inclusive) deste checkpoint em `matches` ordenados */
-  cutoff: number;
-}
+import { buildCheckpoints, type Checkpoint, type RaceMode } from "@/lib/race-checkpoints";
+import type { RaceData, RaceParticipant } from "@/server/services/race";
 
 const AVATAR_PX = 36;
 
@@ -35,6 +28,8 @@ export function RaceTrack({
   data: RaceData;
   currentUserId: string;
 }) {
+  const reduce = useReducedMotion();
+
   // Jogos em ordem cronológica (o servidor já ordena, reforçamos por garantia).
   const matches = useMemo(
     () =>
@@ -59,11 +54,8 @@ export function RaceTrack({
     return map;
   }, [data.participants, matches]);
 
-  const rounds = useMemo(() => buildRoundCheckpoints(matches), [matches]);
-  const days = useMemo(() => buildDayCheckpoints(matches), [matches]);
-
-  const [mode, setMode] = useState<Mode>("round");
-  const checkpoints = mode === "round" ? rounds : days;
+  const [mode, setMode] = useState<RaceMode>("round");
+  const checkpoints = useMemo(() => buildCheckpoints(mode, matches), [mode, matches]);
 
   // Passo selecionado (último por padrão / ao trocar de modo).
   const [step, setStep] = useState(Math.max(0, checkpoints.length - 1));
@@ -100,20 +92,34 @@ export function RaceTrack({
     setPlaying(true);
   }
 
-  // Pontuação de cada participante no checkpoint atual + ordenação das raias
-  // (por pontuação final, para a corrida parecer um pódio estável).
+  // Largura da pista (para mover os avatares por translateX em px — mais suave que `left`).
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [trackW, setTrackW] = useState(0);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const update = () => setTrackW(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Pontuação de cada participante NO checkpoint atual + ordenação das raias pela
+  // pontuação atual (ultrapassagens reais — os avatares sobem e descem). Desempate
+  // estável por userId para evitar tremor quando há empate.
   const lanes = useMemo(() => {
     const cutoff = current?.cutoff ?? -1;
-    const finalIdx = matches.length - 1;
     const rows = data.participants.map((p) => {
       const prefix = prefixByUser.get(p.userId) ?? [];
       const pts = cutoff >= 0 ? (prefix[cutoff] ?? 0) : 0;
-      const total = finalIdx >= 0 ? (prefix[finalIdx] ?? 0) : 0;
-      return { participant: p, pts, total };
+      return { participant: p, pts };
     });
-    rows.sort((a, b) => b.total - a.total || b.pts - a.pts);
+    rows.sort(
+      (a, b) => b.pts - a.pts || a.participant.userId.localeCompare(b.participant.userId),
+    );
     return rows;
-  }, [current, data.participants, prefixByUser, matches.length]);
+  }, [current, data.participants, prefixByUser]);
 
   const leaderPts = useMemo(
     () => lanes.reduce((mx, l) => Math.max(mx, l.pts), 0),
@@ -140,9 +146,7 @@ export function RaceTrack({
           </h3>
           <p className="truncate text-xs text-muted-foreground">
             {current?.label ?? "—"}
-            {data.playerCount > 0 && (
-              <> · {data.playerCount} apostadores</>
-            )}
+            {data.playerCount > 0 && <> · {data.playerCount} apostadores</>}
           </p>
         </div>
         <ModeToggle mode={mode} onChange={setMode} />
@@ -153,23 +157,27 @@ export function RaceTrack({
         {/* Linha de chegada (tesouro) */}
         <FinishLine prize={data.prizeTotal} currency={data.currency} />
 
-        <div className="space-y-2">
-          {lanes.map(({ participant, pts }) => {
-            const pct = leaderPts > 0 ? pts / leaderPts : 0;
-            const isLeader = pts > 0 && pts === leaderPts;
-            const isMe = participant.userId === currentUserId;
-            return (
-              <Lane
-                key={participant.userId}
-                participant={participant}
-                pct={pct}
-                pts={pts}
-                isLeader={isLeader}
-                isMe={isMe}
-              />
-            );
-          })}
-        </div>
+        <LayoutGroup>
+          <div ref={trackRef} className="space-y-2">
+            {lanes.map(({ participant, pts }) => {
+              const pct = leaderPts > 0 ? pts / leaderPts : 0;
+              const isLeader = pts > 0 && pts === leaderPts;
+              const isMe = participant.userId === currentUserId;
+              return (
+                <Lane
+                  key={participant.userId}
+                  participant={participant}
+                  pct={pct}
+                  pts={pts}
+                  isLeader={isLeader}
+                  isMe={isMe}
+                  trackW={trackW}
+                  reduce={!!reduce}
+                />
+              );
+            })}
+          </div>
+        </LayoutGroup>
       </div>
 
       {/* Controles de checkpoint */}
@@ -193,22 +201,38 @@ function Lane({
   pts,
   isLeader,
   isMe,
+  trackW,
+  reduce,
 }: {
   participant: RaceParticipant;
   pct: number;
   pts: number;
   isLeader: boolean;
   isMe: boolean;
+  trackW: number;
+  reduce: boolean;
 }) {
+  // a viagem vai de 0 até a borda da linha de chegada, descontando o avatar
+  const x = pct * Math.max(0, trackW - AVATAR_PX);
+  const spring = reduce
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 140, damping: 22, mass: 0.6 };
+
   return (
-    <div className="relative h-11">
+    <motion.div
+      layout={reduce ? false : "position"}
+      transition={spring}
+      className="relative h-11"
+    >
       {/* raia tracejada até a chegada */}
       <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 border-t border-dashed border-border" />
 
-      <div
-        className="absolute top-1/2 -translate-y-1/2 transition-[left] duration-700 ease-out"
-        // a viagem vai de 0 até a borda da linha de chegada, descontando o avatar
-        style={{ left: `calc(${pct} * (100% - ${AVATAR_PX}px))` }}
+      <motion.div
+        className="absolute left-0"
+        initial={false}
+        style={{ top: "50%", y: "-50%" }}
+        animate={{ x }}
+        transition={spring}
       >
         <div className="flex flex-col items-center gap-0.5">
           <span
@@ -230,8 +254,8 @@ function Lane({
             <Avatar participant={participant} isMe={isMe} isLeader={isLeader} />
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -296,8 +320,7 @@ function FinishLine({ prize, currency }: { prize: number; currency: string }) {
       <div
         className="absolute inset-y-1 left-0 w-1.5 rounded"
         style={{
-          backgroundImage:
-            "repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)",
+          backgroundImage: "repeating-conic-gradient(#fff 0% 25%, #111 0% 50%)",
           backgroundSize: "6px 6px",
         }}
       />
@@ -317,12 +340,13 @@ function ModeToggle({
   mode,
   onChange,
 }: {
-  mode: Mode;
-  onChange: (m: Mode) => void;
+  mode: RaceMode;
+  onChange: (m: RaceMode) => void;
 }) {
   const items = [
     { key: "round" as const, label: "Rodada", Icon: ListOrdered },
     { key: "day" as const, label: "Dia", Icon: CalendarRange },
+    { key: "game" as const, label: "Jogo", Icon: Swords },
   ];
   return (
     <div className="flex shrink-0 gap-1 rounded-full border border-border bg-background p-0.5">
@@ -412,63 +436,4 @@ function Controls({
       </button>
     </div>
   );
-}
-
-// ─────────────────────────── checkpoints ───────────────────────────
-
-/** Um checkpoint por rodada/fase, em ordem cronológica. */
-function buildRoundCheckpoints(matches: RaceMatch[]): Checkpoint[] {
-  const order: string[] = [];
-  const lastIdx = new Map<string, number>();
-  matches.forEach((m, i) => {
-    const key = m.stage === "GROUP" ? `g${m.matchday ?? 0}` : m.stage;
-    if (!lastIdx.has(key)) order.push(key);
-    lastIdx.set(key, i);
-  });
-  return order.map((key) => ({
-    key,
-    label: roundLabel(key, matches[lastIdx.get(key)!]),
-    cutoff: lastIdx.get(key)!,
-  }));
-}
-
-function roundLabel(key: string, m: RaceMatch): string {
-  if (key.startsWith("g")) return `Rodada ${key.slice(1)}`;
-  return STAGE_LABEL[m.stage];
-}
-
-/** Um checkpoint por dia (fuso local), em ordem cronológica. */
-function buildDayCheckpoints(matches: RaceMatch[]): Checkpoint[] {
-  const order: string[] = [];
-  const lastIdx = new Map<string, number>();
-  const firstDate = new Map<string, Date>();
-  matches.forEach((m, i) => {
-    const d = new Date(m.kickoffAt);
-    const key = d.toLocaleDateString("pt-BR");
-    if (!lastIdx.has(key)) {
-      order.push(key);
-      firstDate.set(key, d);
-    }
-    lastIdx.set(key, i);
-  });
-  return order.map((key) => ({
-    key,
-    label: dayLabel(firstDate.get(key)!),
-    cutoff: lastIdx.get(key)!,
-  }));
-}
-
-/** "Hoje" / "Ontem" / "sex., 12/06". */
-function dayLabel(date: Date): string {
-  const startOf = (d: Date) =>
-    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const diff = Math.round((startOf(date) - startOf(new Date())) / 86_400_000);
-  if (diff === 0) return "Hoje";
-  if (diff === -1) return "Ontem";
-  if (diff === 1) return "Amanhã";
-  return date.toLocaleDateString("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-  });
 }
