@@ -29,8 +29,11 @@ describe("computeGroupStandings", () => {
     expect(s[0].points).toBe(3);
     expect(s[0].played).toBe(1);
     expect(s[0].won).toBe(1);
-    expect(s[1].teamId).toBe("ARG");
-    expect(s[1].lost).toBe(1);
+    // FIFA estrito: ARG (SG -2) fica atrás de URU/PAR (SG 0)
+    const arg = s.find((x) => x.teamId === "ARG")!;
+    expect(arg.position).toBe(4);
+    expect(arg.lost).toBe(1);
+    expect(s[3].teamId).toBe("ARG");
   });
 
   it("desempate por saldo de gols", () => {

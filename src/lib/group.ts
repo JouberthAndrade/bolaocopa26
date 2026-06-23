@@ -73,10 +73,9 @@ export function computeGroupStandings(
     else              { h.drawn++; h.points++; a.drawn++; a.points++; }
   }
 
-  // Pass 1: pontos → jogos disputados → saldo geral → gols marcados
+  // Pass 1: pontos → saldo geral → gols marcados
   const sorted = [...map.values()].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
-    if (b.played !== a.played) return b.played - a.played;
     if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
     return b.goalsFor - a.goalsFor;
   });
@@ -90,7 +89,6 @@ export function computeGroupStandings(
     while (
       j < sorted.length &&
       sorted[j].points === ref.points &&
-      sorted[j].played === ref.played &&
       sorted[j].goalDiff === ref.goalDiff &&
       sorted[j].goalsFor === ref.goalsFor
     ) j++;
