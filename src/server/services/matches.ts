@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { KNOCKOUT_UNLOCK_DATE } from "@/lib/constants";
 
 export async function getUserPools(userId: string) {
   return db.pool.findMany({
@@ -67,6 +68,16 @@ export async function isGroupStageComplete(): Promise<boolean> {
     db.match.count({ where: { stage: "GROUP", status: { not: "FINISHED" } } }),
   ]);
   return total > 0 && pending === 0;
+}
+
+/**
+ * Libera palpites do mata-mata quando ocorrer o PRIMEIRO de:
+ * - Todos os jogos GROUP finalizados
+ * - Data/hora 27/06/2026 às 23h BRT (02:00 UTC do dia 28)
+ */
+export async function isKnockoutUnlocked(): Promise<boolean> {
+  if (new Date() >= KNOCKOUT_UNLOCK_DATE) return true;
+  return isGroupStageComplete();
 }
 
 /** Seleções do torneio (para o palpite de campeão/vice). */
