@@ -100,7 +100,7 @@ export function PhaseView({
       {/* Conteúdo da fase */}
       {stageMatches.length > 0 ? (
         <div className="space-y-3">
-          {/* Bannerr de bloqueio: exibido apenas em fases knockout antes da liberação */}
+          {/* Banner de bloqueio: exibido apenas em fases knockout antes da liberação */}
           {idx > 0 && !groupComplete && (
             <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-6 py-5 text-center">
               <Lock className="h-5 w-5 text-primary" />
