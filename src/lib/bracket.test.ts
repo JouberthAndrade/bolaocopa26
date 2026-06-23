@@ -78,4 +78,35 @@ describe("resolveSlot", () => {
     expect(r.team).toBeNull();
     expect(r.label).toBe("Venc. Semif. 1");
   });
+
+  it("loser_sf sempre retorna null com label preservado", () => {
+    const slot: BracketSlot = { kind: "loser_sf", n: 1, label: "Perd. Semif. 1" };
+    const r = resolveSlot(slot, standings);
+    expect(r.team).toBeNull();
+    expect(r.label).toBe("Perd. Semif. 1");
+  });
+
+  it("best_3 desempata por saldo de gols quando pontos são iguais", () => {
+    // Dois 3° colocados com mesmos pontos, mas saldos de gols diferentes:
+    // Grupo D 3° → 3pts, GD = -1, GF = 2
+    // Grupo E 3° → 3pts, GD = +2, GF = 4  ← deve ganhar pelo saldo
+    const tieStandings = new Map<string, TeamStanding[]>([
+      ["D", [
+        standing({ teamId: "D1", name: "D-1°", countryCode: "DE", position: 1, points: 9 }),
+        standing({ teamId: "D2", name: "D-2°", countryCode: "FR", position: 2, points: 6 }),
+        standing({ teamId: "D3", name: "D-3°", countryCode: "PT", position: 3, points: 3, goalDiff: -1, goalsFor: 2, goalsAgainst: 3 }),
+        standing({ teamId: "D4", name: "D-4°", countryCode: "NL", position: 4, points: 0 }),
+      ]],
+      ["E", [
+        standing({ teamId: "E1", name: "E-1°", countryCode: "ES", position: 1, points: 9 }),
+        standing({ teamId: "E2", name: "E-2°", countryCode: "IT", position: 2, points: 6 }),
+        standing({ teamId: "E3", name: "E-melhor3", countryCode: "BR", position: 3, points: 3, goalDiff: 2, goalsFor: 4, goalsAgainst: 2 }),
+        standing({ teamId: "E4", name: "E-4°", countryCode: "AR", position: 4, points: 0 }),
+      ]],
+    ]);
+    const slot: BracketSlot = { kind: "best_3", groups: ["D", "E"], label: "3°DE" };
+    const r = resolveSlot(slot, tieStandings);
+    // E-melhor3 tem GD +2 vs D-3° GD -1 → E-melhor3 vence o desempate
+    expect(r.team?.name).toBe("E-melhor3");
+  });
 });

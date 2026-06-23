@@ -203,7 +203,7 @@ export async function getKnockoutMatchesWithVirtual(opts: {
 
   // Compute group standings from DB matches for R32 resolution
   const groupMatches = real.filter((m) => m.stage === "GROUP");
-  const standingsMap = buildStandingsMap(groupMatches, real);
+  const standingsMap = buildStandingsMap(groupMatches);
 
   const virtual: MatchWithBet[] = [];
 
@@ -256,9 +256,9 @@ export async function getKnockoutMatchesWithVirtual(opts: {
  */
 function buildStandingsMap(
   groupMatches: MatchWithBet[],
-  allMatches: MatchWithBet[],
 ): Map<string, ReturnType<typeof computeGroupStandings>> {
-  // Collect unique teams per group from match participants
+  // Collect unique teams per group from match participants.
+  // IDs são `${group}-${name}` — names are unique within a group in the World Cup.
   const teamsByGroup = new Map<string, Array<{ id: string; name: string; countryCode: string }>>();
   const teamIdSet = new Map<string, { id: string; name: string; countryCode: string }>();
 
@@ -268,13 +268,13 @@ function buildStandingsMap(
     const group = teamsByGroup.get(g)!;
     // home
     if (!teamIdSet.has(`${g}-${m.home.name}`)) {
-      const t = { id: `${g}-home-${m.home.name}`, name: m.home.name, countryCode: m.home.countryCode };
+      const t = { id: `${g}-${m.home.name}`, name: m.home.name, countryCode: m.home.countryCode };
       teamIdSet.set(`${g}-${m.home.name}`, t);
       group.push(t);
     }
     // away
     if (!teamIdSet.has(`${g}-${m.away.name}`)) {
-      const t = { id: `${g}-away-${m.away.name}`, name: m.away.name, countryCode: m.away.countryCode };
+      const t = { id: `${g}-${m.away.name}`, name: m.away.name, countryCode: m.away.countryCode };
       teamIdSet.set(`${g}-${m.away.name}`, t);
       group.push(t);
     }

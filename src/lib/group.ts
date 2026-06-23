@@ -53,14 +53,15 @@ export function computeGroupStandings(
   }
 
   const finished = matches.filter(
-    (m) => m.homeScore != null && m.awayScore != null,
+    (m): m is typeof m & { homeScore: number; awayScore: number } =>
+      m.homeScore != null && m.awayScore != null,
   );
 
   for (const m of finished) {
     const h = map.get(m.homeTeamId);
     const a = map.get(m.awayTeamId);
     if (!h || !a) continue;
-    const hg = m.homeScore!, ag = m.awayScore!;
+    const hg = m.homeScore, ag = m.awayScore;
 
     h.played++; a.played++;
     h.goalsFor += hg; h.goalsAgainst += ag;
@@ -103,7 +104,7 @@ export function computeGroupStandings(
 
 function applyH2H(
   tied: Array<Omit<TeamStanding, "position">>,
-  allMatches: MatchForStandings[],
+  allMatches: Array<{ homeTeamId: string; awayTeamId: string; homeScore: number; awayScore: number }>,
 ): Array<Omit<TeamStanding, "position">> {
   const ids = new Set(tied.map((t) => t.teamId));
   const h2h = new Map<string, { pts: number; gd: number; gf: number }>();
@@ -111,7 +112,7 @@ function applyH2H(
 
   for (const m of allMatches) {
     if (!ids.has(m.homeTeamId) || !ids.has(m.awayTeamId)) continue;
-    const hg = m.homeScore!, ag = m.awayScore!;
+    const hg = m.homeScore, ag = m.awayScore;
     const ho = h2h.get(m.homeTeamId)!;
     const aw = h2h.get(m.awayTeamId)!;
     ho.gd += hg - ag; aw.gd += ag - hg;

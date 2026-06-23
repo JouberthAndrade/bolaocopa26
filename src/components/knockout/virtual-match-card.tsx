@@ -4,35 +4,35 @@ import { cn } from "@/lib/utils";
 import { STAGE_LABEL } from "@/lib/labels";
 import type { MatchWithBet } from "@/server/services/matches";
 
+function TeamSlot({
+  name, countryCode, label,
+}: { name: string; countryCode: string; label?: string }) {
+  const resolved = countryCode.length > 0;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      {resolved ? (
+        <Flag countryCode={countryCode} name={name} size={52} />
+      ) : (
+        <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-secondary">
+          <Shield className="h-7 w-7 text-muted-foreground/50" />
+        </div>
+      )}
+      <span className={cn(
+        "text-center text-sm font-semibold leading-tight",
+        !resolved && "text-muted-foreground",
+      )}>
+        {resolved ? name : (label ?? name)}
+      </span>
+    </div>
+  );
+}
+
 export function VirtualMatchCard({ match }: { match: MatchWithBet }) {
   const kickoff = new Date(match.kickoffAt);
   const dateStr = kickoff.toLocaleDateString("pt-BR", {
     day: "2-digit", month: "2-digit",
   });
   const weekday = kickoff.toLocaleDateString("pt-BR", { weekday: "short" });
-
-  function TeamSlot({
-    name, countryCode, label,
-  }: { name: string; countryCode: string; label?: string }) {
-    const resolved = countryCode.length > 0;
-    return (
-      <div className="flex flex-col items-center gap-2">
-        {resolved ? (
-          <Flag countryCode={countryCode} name={name} size={52} />
-        ) : (
-          <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-secondary">
-            <Shield className="h-7 w-7 text-muted-foreground/50" />
-          </div>
-        )}
-        <span className={cn(
-          "text-center text-sm font-semibold leading-tight",
-          !resolved && "text-muted-foreground",
-        )}>
-          {resolved ? name : (label ?? name)}
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/80">
