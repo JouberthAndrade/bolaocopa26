@@ -3,23 +3,21 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MatchCard } from "@/components/match/match-card";
+import { VirtualMatchCard } from "@/components/knockout/virtual-match-card";
 import { STAGE_LABEL } from "@/lib/labels";
-import { cn } from "@/lib/utils";
 import type { MatchWithBet } from "@/server/services/matches";
 import type { MatchStage } from "@prisma/client";
 
-/** Ordem cronológica das 7 fases da Copa. */
 const PHASES: MatchStage[] = ["GROUP", "R32", "R16", "QF", "SF", "THIRD_PLACE", "FINAL"];
 
-/** Datas previstas de início (fallback quando os confrontos ainda não existem). */
 const PREDICTED_START: Record<MatchStage, Date> = {
-  GROUP: new Date(2026, 5, 11),
-  R32: new Date(2026, 5, 28),
-  R16: new Date(2026, 6, 4),
-  QF: new Date(2026, 6, 9),
-  SF: new Date(2026, 6, 14),
+  GROUP:       new Date(2026, 5, 11),
+  R32:         new Date(2026, 5, 28),
+  R16:         new Date(2026, 6, 4),
+  QF:          new Date(2026, 6, 9),
+  SF:          new Date(2026, 6, 14),
   THIRD_PLACE: new Date(2026, 6, 18),
-  FINAL: new Date(2026, 6, 19),
+  FINAL:       new Date(2026, 6, 19),
 };
 
 function formatLongDate(d: Date) {
@@ -44,8 +42,6 @@ export function PhaseView({
     return map;
   }, [matches]);
 
-  // Abre na fase de mata-mata atual: a primeira eliminatória não concluída,
-  // ou nas 16-avos por padrão.
   const [idx, setIdx] = useState(() => {
     const firstKnockoutUnfinished = PHASES.findIndex(
       (s, i) =>
@@ -62,10 +58,6 @@ export function PhaseView({
   const start = stageMatches[0]
     ? new Date(stageMatches[0].kickoffAt)
     : PREDICTED_START[stage];
-
-  // Eliminatórias ficam fechadas até a fase de grupos terminar.
-  const knockoutLocked = stage !== "GROUP" && !groupComplete;
-  const showMatches = stageMatches.length > 0 && !knockoutLocked;
 
   return (
     <div className="space-y-4">
@@ -106,41 +98,28 @@ export function PhaseView({
       </section>
 
       {/* Conteúdo da fase */}
-      {showMatches ? (
+      {stageMatches.length > 0 ? (
         <div className="space-y-3">
-          {stageMatches.map((m) => (
-            <MatchCard key={m.id} match={m} poolId={poolId} />
-          ))}
+          {stageMatches.map((m) =>
+            m.isVirtual ? (
+              <VirtualMatchCard key={m.id} match={m} />
+            ) : (
+              <MatchCard key={m.id} match={m} poolId={poolId} />
+            ),
+          )}
         </div>
       ) : (
-        <EmptyPhase
-          label={STAGE_LABEL[stage]}
-          start={start}
-          reason={
-            knockoutLocked
-              ? "Os confrontos são definidos após a fase de grupos."
-              : "Os confrontos desta fase ainda não foram definidos."
-          }
-        />
+        <EmptyPhase label={STAGE_LABEL[stage]} start={start} />
       )}
     </div>
   );
 }
 
-function EmptyPhase({
-  label,
-  start,
-  reason,
-}: {
-  label: string;
-  start: Date;
-  reason: string;
-}) {
+function EmptyPhase({ label, start }: { label: string; start: Date }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-6 py-12 text-center">
       <span className="text-5xl" aria-hidden>🏆</span>
       <h3 className="text-lg font-semibold">{label}</h3>
-      <p className="max-w-xs text-sm text-muted-foreground">{reason}</p>
       <p className="text-sm font-medium capitalize text-primary">
         Previsto para começar em {formatLongDate(start)}.
       </p>
