@@ -10,6 +10,7 @@ export type BracketSlot =
   | { kind: "winner_r32"; n: number; label: string }
   | { kind: "winner_r16"; n: number; label: string }
   | { kind: "winner_qf"; n: number; label: string }
+  | { kind: "winner_sf"; n: number; label: string }
   | { kind: "loser_sf"; n: number; label: string };
 
 export interface BracketMatch {
@@ -94,8 +95,8 @@ export const FIFA_2026_THIRD: BracketMatch[] = [{
 
 export const FIFA_2026_FINAL: BracketMatch[] = [{
   slotLabel: "final",
-  home: { kind: "winner_qf", n: 5, label: "Venc. Semif. 1" },
-  away: { kind: "winner_qf", n: 6, label: "Venc. Semif. 2" },
+  home: { kind: "winner_sf", n: 1, label: "Venc. Semif. 1" },
+  away: { kind: "winner_sf", n: 2, label: "Venc. Semif. 2" },
 }];
 
 // Map from MatchStage to bracket array
@@ -130,7 +131,7 @@ export function resolveSlot(
     const team = findBest3rd(standings, slot.groups);
     return { team, label: slot.label };
   }
-  // winner_r32, winner_r16, winner_qf, loser_sf — não resolvíveis em memória
+  // winner_r32, winner_r16, winner_qf, winner_sf, loser_sf — não resolvíveis em memória
   return { team: null, label: slot.label };
 }
 

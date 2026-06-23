@@ -71,4 +71,11 @@ describe("resolveSlot", () => {
     expect(r.team).toBeNull();
     expect(r.label).toBe("Venc. R32-1");
   });
+
+  it("winner_sf sempre retorna null (não resolvível em memória)", () => {
+    const slot: BracketSlot = { kind: "winner_sf", n: 1, label: "Venc. Semif. 1" };
+    const r = resolveSlot(slot, standings);
+    expect(r.team).toBeNull();
+    expect(r.label).toBe("Venc. Semif. 1");
+  });
 });
