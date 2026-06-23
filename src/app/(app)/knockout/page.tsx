@@ -2,8 +2,8 @@ import Link from "next/link";
 import { requireUserId } from "@/server/guards";
 import {
   getUserPools,
-  getAllMatchesWithBets,
-  isGroupStageComplete,
+  getKnockoutMatchesWithVirtual,
+  isKnockoutUnlocked,
 } from "@/server/services/matches";
 import { PhaseView } from "@/components/knockout/phase-view";
 import { PoolSelector } from "@/components/pool/pool-selector";
@@ -43,8 +43,8 @@ export default async function KnockoutPage({
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
   const [matches, groupComplete] = await Promise.all([
-    getAllMatchesWithBets({ userId, poolId: selected.id }),
-    isGroupStageComplete(),
+    getKnockoutMatchesWithVirtual({ userId, poolId: selected.id }),
+    isKnockoutUnlocked(),
   ]);
 
   return (

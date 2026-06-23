@@ -5,12 +5,14 @@ import { Pencil, Lock } from "lucide-react";
 import { Flag } from "@/components/flag";
 import { MatchCard } from "@/components/match/match-card";
 import { Dialog } from "@/components/ui/dialog";
-import { isBettable } from "@/lib/utils";
+import { isBettable, cn } from "@/lib/utils";
 import type { MatchWithBet } from "@/server/services/matches";
+import type { TeamStanding } from "@/lib/group";
 
 interface GroupData {
   letter: string;
   teams: { id: string; name: string; countryCode: string }[];
+  standings: TeamStanding[];
   matches: MatchWithBet[];
 }
 
@@ -48,14 +50,50 @@ export function GroupsGrid({
                 </span>
               </div>
 
-              <ul className="divide-y divide-border">
-                {group.teams.map((team) => (
-                  <li key={team.id} className="flex items-center gap-3 px-4 py-3">
-                    <Flag countryCode={team.countryCode} name={team.name} size={32} />
-                    <span className="font-medium">{team.name}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* Tabela de classificação */}
+              <div className="px-2 py-1">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground">
+                      <th className="w-5 py-1 text-center font-medium">#</th>
+                      <th className="py-1 text-left font-medium pl-1">Seleção</th>
+                      <th className="w-7 py-1 text-center font-bold text-foreground">P</th>
+                      <th className="w-6 py-1 text-center font-medium">J</th>
+                      <th className="w-6 py-1 text-center font-medium">V</th>
+                      <th className="w-6 py-1 text-center font-medium">E</th>
+                      <th className="w-6 py-1 text-center font-medium">D</th>
+                      <th className="w-8 py-1 text-center font-medium">SG</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {group.standings.map((s) => (
+                      <tr key={s.teamId} className={cn(
+                        "transition-colors",
+                        s.position <= 2 && "bg-primary/5",
+                      )}>
+                        <td className="py-1.5 text-center text-muted-foreground">{s.position}</td>
+                        <td className="py-1.5 pl-1">
+                          <div className="flex items-center gap-1.5">
+                            <Flag countryCode={s.countryCode} name={s.name} size={18} />
+                            <span className="truncate max-w-[80px] font-medium">{s.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-1.5 text-center font-bold">{s.points}</td>
+                        <td className="py-1.5 text-center text-muted-foreground">{s.played}</td>
+                        <td className="py-1.5 text-center text-muted-foreground">{s.won}</td>
+                        <td className="py-1.5 text-center text-muted-foreground">{s.drawn}</td>
+                        <td className="py-1.5 text-center text-muted-foreground">{s.lost}</td>
+                        <td className={cn(
+                          "py-1.5 text-center",
+                          s.goalDiff > 0 ? "text-primary" : s.goalDiff < 0 ? "text-destructive" : "text-muted-foreground",
+                        )}>
+                          {s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted-foreground">
                 <span>{group.matches.length} jogos</span>

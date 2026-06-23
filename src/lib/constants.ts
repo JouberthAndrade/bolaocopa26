@@ -19,3 +19,6 @@ export function matchRevealAt(kickoffAt: Date, lockAt: Date): Date {
   const reveal = new Date(kickoffAt.getTime() - REVEAL_BEFORE_KICKOFF_MS);
   return reveal > lockAt ? reveal : lockAt;
 }
+
+/** Liberação dos palpites do mata-mata: 27/06/2026 às 23h BRT = 02:00 UTC de 28/06. */
+export const KNOCKOUT_UNLOCK_DATE = new Date("2026-06-28T02:00:00.000Z");

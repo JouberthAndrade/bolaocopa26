@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { normalizeGroup } from "@/lib/group";
+import { normalizeGroup, computeGroupStandings, type TeamStanding } from "@/lib/group";
 
 export async function getGroups() {
   const teams = await db.team.findMany({
@@ -77,11 +77,19 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
 
   return [...teamsByGroup.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([letter, groupTeams]) => ({
-      letter,
-      teams: groupTeams,
-      matches: matchesByGroup.get(letter) ?? [],
-    }));
+    .map(([letter, groupTeams]) => {
+      const groupMatches = matchesByGroup.get(letter) ?? [];
+      // Build match inputs for standings computation (need teamId per match row)
+      const teamIdByName = new Map(groupTeams.map((t) => [t.name, t.id]));
+      const matchInputs = groupMatches.map((m) => ({
+        homeTeamId: teamIdByName.get(m.home.name) ?? "",
+        awayTeamId: teamIdByName.get(m.away.name) ?? "",
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+      }));
+      const standings: TeamStanding[] = computeGroupStandings(groupTeams, matchInputs);
+      return { letter, teams: groupTeams, standings, matches: groupMatches };
+    });
 }
 
 export async function getGroupMatches(tournamentId?: string) {
