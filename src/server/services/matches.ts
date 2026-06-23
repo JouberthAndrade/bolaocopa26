@@ -201,9 +201,12 @@ export async function getKnockoutMatchesWithVirtual(opts: {
   // Determine which knockout stages already have real matches in DB
   const stagesWithData = new Set(real.map((m) => m.stage));
 
-  // Compute group standings from DB matches for R32 resolution
+  // Compute group standings + quais grupos já terminaram (todos os jogos
+  // encerrados) — só grupos completos têm posição final confiável para resolver
+  // os slots 1°/2° do mata-mata.
   const groupMatches = real.filter((m) => m.stage === "GROUP");
   const standingsMap = buildStandingsMap(groupMatches);
+  const completeGroups = getCompleteGroups(groupMatches);
 
   const virtual: MatchWithBet[] = [];
 
@@ -214,18 +217,19 @@ export async function getKnockoutMatchesWithVirtual(opts: {
     if (!bracketMatches) continue;
 
     bracketMatches.forEach((bm, idx) => {
-      const homeResolved = resolveSlot(bm.home, standingsMap);
-      const awayResolved = resolveSlot(bm.away, standingsMap);
+      const homeResolved = resolveSlot(bm.home, standingsMap, completeGroups);
+      const awayResolved = resolveSlot(bm.away, standingsMap, completeGroups);
 
       virtual.push({
-        id: `virtual-${stage}-${idx}`,
-        kickoffAt: new Date(KNOCKOUT_UNLOCK_DATE.getTime() + idx * 60_000),
+        id: `virtual-${stage}-${bm.matchNo}`,
+        // Meio-dia UTC evita o dia "voltar" ao exibir em fuso BRT (UTC-3).
+        kickoffAt: new Date(`${bm.predictedDate}T16:00:00.000Z`),
         lockAt: KNOCKOUT_UNLOCK_DATE,
         status: "SCHEDULED",
         stage,
         group: null,
         matchday: idx + 1,
-        venue: null,
+        venue: bm.venue,
         homeScore: null,
         awayScore: null,
         home: {
@@ -295,4 +299,23 @@ function buildStandingsMap(
   }
 
   return standingsMap;
+}
+
+/**
+ * Conjunto de grupos cuja fase terminou (têm jogos e todos encerrados).
+ * Só nesses a posição final (1°/2°) é confiável para resolver o mata-mata.
+ */
+function getCompleteGroups(groupMatches: MatchWithBet[]): Set<string> {
+  const total = new Map<string, number>();
+  const finished = new Map<string, number>();
+  for (const m of groupMatches) {
+    const g = m.group ?? "";
+    total.set(g, (total.get(g) ?? 0) + 1);
+    if (m.status === "FINISHED") finished.set(g, (finished.get(g) ?? 0) + 1);
+  }
+  const complete = new Set<string>();
+  for (const [g, n] of total) {
+    if (n > 0 && finished.get(g) === n) complete.add(g);
+  }
+  return complete;
 }
