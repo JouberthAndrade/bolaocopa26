@@ -22,3 +22,7 @@ export function matchRevealAt(kickoffAt: Date, lockAt: Date): Date {
 
 /** Liberação dos palpites do mata-mata: 27/06/2026 às 23h BRT = 02:00 UTC de 28/06. */
 export const KNOCKOUT_UNLOCK_DATE = new Date("2026-06-28T02:00:00.000Z");
+
+/** Bônus por acertar quem avança nos pênaltis num jogo de mata-mata decidido
+ *  no shootout. Fixo (não configurável por bolão). */
+export const POINTS_PENALTY_ADVANCE = 1;
