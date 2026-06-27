@@ -12,10 +12,11 @@ function outcome(home: number, away: number): Outcome {
 
 /**
  * Pontuação de um palpite (função pura — fácil de testar).
- * - placar exato: pointsCorrectResult/Draw + pointsExactScore (bônus)
+ * - placar exato: pointsCorrectResult/Draw + pointsExactScore (bônus aditivo)
  * - acertou resultado (vitória): pointsCorrectResult
  * - acertou empate (sem placar exato): pointsCorrectDraw
- * - bônus de mata-mata: jogo decidido nos pênaltis, palpite foi empate e acertou quem avançou.
+ * - bônus de mata-mata: SOMADO POR CIMA — jogo decidido nos pênaltis (penaltyWinner != null),
+ *   palpite foi empate e acertou quem avançou. Independente do bônus de placar exato.
  */
 export function computeBetPoints(
   rule: Pick<
@@ -37,30 +38,17 @@ export function computeBetPoints(
 
   const isDraw = actual.home === actual.away;
   const base = isDraw ? rule.pointsCorrectDraw : rule.pointsCorrectResult;
+  let points = exact ? base + rule.pointsExactScore : base;
 
-  // Verifica se o bônus de mata-mata se aplica
-  const hasPenaltyBonus =
+  // Bônus de mata-mata: jogo decidido nos pênaltis (penaltyWinner != null),
+  // palpite foi empate e o usuário acertou quem avançou. Somado por cima.
+  if (
     penalty?.penaltyWinner != null &&
     guess.home === guess.away &&
     penalty.betAdvances != null &&
-    penalty.betAdvances === penalty.penaltyWinner;
-
-  let points = base;
-
-  // Se o 4º parâmetro foi fornecido, usar a lógica especial:
-  // - Se há pênaltis (penaltyWinner != null), o bônus só é concedido se acertar o avanço
-  // - Se não há pênaltis (penaltyWinner null), não há bônus de placar exato
-  if (penalty !== undefined) {
-    if (hasPenaltyBonus) {
-      // Acertou o avanço: adiciona o bônus de mata-mata em vez do bônus de exato
-      points += penalty.bonus ?? 0;
-    }
-    // Se errou o avanço ou não foi pênaltis, não adiciona nem exato nem bônus (só base)
-  } else {
-    // Comportamento antigo: sem o 4º parâmetro, usa o bônus de placar exato normalmente
-    if (exact) {
-      points += rule.pointsExactScore;
-    }
+    penalty.betAdvances === penalty.penaltyWinner
+  ) {
+    points += penalty.bonus ?? 0;
   }
 
   return points;
