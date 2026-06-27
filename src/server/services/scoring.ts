@@ -1,5 +1,6 @@
-import type { ScoringRule } from "@prisma/client";
+import type { Advance, ScoringRule } from "@prisma/client";
 import { db } from "@/lib/db";
+import { POINTS_PENALTY_ADVANCE } from "@/lib/constants";
 
 type Outcome = "HOME" | "AWAY" | "DRAW";
 
@@ -14,6 +15,7 @@ function outcome(home: number, away: number): Outcome {
  * - placar exato: pointsCorrectResult/Draw + pointsExactScore (bônus)
  * - acertou resultado (vitória): pointsCorrectResult
  * - acertou empate (sem placar exato): pointsCorrectDraw
+ * - bônus de mata-mata: jogo decidido nos pênaltis, palpite foi empate e acertou quem avançou.
  */
 export function computeBetPoints(
   rule: Pick<
@@ -22,6 +24,11 @@ export function computeBetPoints(
   >,
   guess: { home: number; away: number },
   actual: { home: number; away: number },
+  penalty?: {
+    betAdvances?: Advance | null;
+    penaltyWinner?: Advance | null;
+    bonus?: number;
+  },
 ): number {
   const exact = guess.home === actual.home && guess.away === actual.away;
   const sameOutcome = outcome(guess.home, guess.away) === outcome(actual.home, actual.away);
@@ -30,7 +37,33 @@ export function computeBetPoints(
 
   const isDraw = actual.home === actual.away;
   const base = isDraw ? rule.pointsCorrectDraw : rule.pointsCorrectResult;
-  return exact ? base + rule.pointsExactScore : base;
+
+  // Verifica se o bônus de mata-mata se aplica
+  const hasPenaltyBonus =
+    penalty?.penaltyWinner != null &&
+    guess.home === guess.away &&
+    penalty.betAdvances != null &&
+    penalty.betAdvances === penalty.penaltyWinner;
+
+  let points = base;
+
+  // Se o 4º parâmetro foi fornecido, usar a lógica especial:
+  // - Se há pênaltis (penaltyWinner != null), o bônus só é concedido se acertar o avanço
+  // - Se não há pênaltis (penaltyWinner null), não há bônus de placar exato
+  if (penalty !== undefined) {
+    if (hasPenaltyBonus) {
+      // Acertou o avanço: adiciona o bônus de mata-mata em vez do bônus de exato
+      points += penalty.bonus ?? 0;
+    }
+    // Se errou o avanço ou não foi pênaltis, não adiciona nem exato nem bônus (só base)
+  } else {
+    // Comportamento antigo: sem o 4º parâmetro, usa o bônus de placar exato normalmente
+    if (exact) {
+      points += rule.pointsExactScore;
+    }
+  }
+
+  return points;
 }
 
 /**
@@ -49,7 +82,7 @@ export async function scoreFinishedMatches() {
       homeScore: { not: null },
       awayScore: { not: null },
     },
-    select: { id: true, homeScore: true, awayScore: true },
+    select: { id: true, homeScore: true, awayScore: true, penaltyWinner: true },
   });
 
   let scoredMatches = 0;
@@ -71,6 +104,11 @@ export async function scoreFinishedMatches() {
           rule,
           { home: bet.homeGuess, away: bet.awayGuess },
           actual,
+          {
+            betAdvances: bet.advances,
+            penaltyWinner: match.penaltyWinner,
+            bonus: POINTS_PENALTY_ADVANCE,
+          },
         );
         if (points !== bet.pointsEarned) {
           await tx.bet.update({ where: { id: bet.id }, data: { pointsEarned: points } });

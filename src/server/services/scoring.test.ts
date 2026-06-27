@@ -48,3 +48,52 @@ describe("computeBetPoints — regras configuráveis (sem hardcode)", () => {
     expect(computeBetPoints(custom, { home: 2, away: 2 }, { home: 2, away: 2 })).toBe(7);
   });
 });
+
+describe("computeBetPoints — bônus de pênaltis (mata-mata)", () => {
+  // Jogo real foi aos pênaltis: actual é empate (1x1) e penaltyWinner definido.
+  it("empate certo + acertou quem passou → base empate (2) + bônus (1) = 3", () => {
+    expect(
+      computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(3);
+  });
+
+  it("empate certo + errou quem passou → só base empate (2)", () => {
+    expect(
+      computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "AWAY",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(2);
+  });
+
+  it("jogo não foi aos pênaltis (penaltyWinner null) → sem bônus", () => {
+    expect(
+      computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: null,
+        bonus: 1,
+      }),
+    ).toBe(2);
+  });
+
+  it("palpite não foi empate → sem bônus mesmo com penaltyWinner", () => {
+    // previu 2x1 (vitória mandante) num jogo que terminou 1x1 nos pênaltis:
+    // erra a base (0) e não recebe bônus.
+    expect(
+      computeBetPoints(rule, { home: 2, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(0);
+  });
+
+  it("sem o 4º parâmetro, comportamento antigo é preservado", () => {
+    expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 })).toBe(3);
+  });
+});
