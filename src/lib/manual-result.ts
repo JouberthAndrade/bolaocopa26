@@ -12,6 +12,7 @@ export const manualResultSchema = z
     awayCode: z.string().min(1).optional(),
     homeScore: z.number().int().min(0).max(99),
     awayScore: z.number().int().min(0).max(99),
+    penaltyWinner: z.enum(["HOME", "AWAY"]).optional(),
   })
   .refine((d) => !!d.externalId || (!!d.homeCode && !!d.awayCode), {
     message: "Informe externalId OU homeCode + awayCode",

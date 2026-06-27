@@ -21,6 +21,26 @@ describe("manualResultSchema", () => {
     const r = manualResultSchema.safeParse({ externalId: "1", homeScore: -1, awayScore: 0 });
     expect(r.success).toBe(false);
   });
+
+  it("aceita penaltyWinner opcional", () => {
+    const r = manualResultSchema.safeParse({
+      externalId: "1",
+      homeScore: 1,
+      awayScore: 1,
+      penaltyWinner: "HOME",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejeita penaltyWinner inválido", () => {
+    const r = manualResultSchema.safeParse({
+      externalId: "1",
+      homeScore: 1,
+      awayScore: 1,
+      penaltyWinner: "DRAW",
+    });
+    expect(r.success).toBe(false);
+  });
 });
 
 describe("manualResultsBodySchema — normaliza para array", () => {

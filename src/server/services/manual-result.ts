@@ -68,6 +68,7 @@ export async function applyManualResults(
         // já no próximo passo. Também trava o resultado contra sobrescrita pelo
         // provedor (sync respeita resultConfirmed = true).
         resultConfirmed: true,
+        penaltyWinner: r.penaltyWinner ?? null,
       },
     });
     applied.push({
