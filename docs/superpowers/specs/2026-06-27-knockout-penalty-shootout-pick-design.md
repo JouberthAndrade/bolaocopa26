@@ -17,44 +17,69 @@ Duas entregas no mata-mata:
 
 ## Parte 1 — Correção do salvamento
 
+### Requisito
+
+Liberar o palpite **assim que o confronto estiver definido**. Quando o jogo
+aparece na API com os dois times resolvidos, o usuário já pode palpitar — sem
+esperar a fase de grupos terminar nem a data de liberação. Hoje, alguns
+confrontos de 16-avos já estão definidos (ex.: África do Sul × Canadá,
+Brasil × Japão, Países Baixos × Marrocos, Estados Unidos × Bósnia).
+
 ### Causa-raiz
 
-O portão (gate) de liberação dos palpites do mata-mata está **inconsistente
-entre UI e servidor**:
+A action de salvar `upsertBet` aplica um gate **global** ao mata-mata:
 
-- A página do mata-mata decide o que é editável com `isKnockoutUnlocked()` —
-  libera quando **a fase de grupos terminou OU** a data passou de 27/06 23h BRT
-  (`src/server/services/matches.ts:100`).
-- A action de salvar `upsertBet` ainda usa o gate **mais restrito**
-  `isGroupStageComplete()` — exige que **todos** os jogos de grupo estejam
-  `FINISHED` (`src/server/actions/bets.ts:36`).
+```ts
+if (match.stage !== "GROUP" && !(await isGroupStageComplete())) {
+  return { ok: false, error: "Os palpites das fases finais abrem após a fase de grupos" };
+}
+```
 
-Quando o gate por data libera a UI (ou algum jogo de grupo não está marcado como
-`FINISHED` no banco), o card mostra os inputs como editáveis, o usuário digita o
-placar, e o servidor rejeita → **"Erro ao salvar"**. O gate da action nunca foi
-atualizado quando a liberação por "OU data" foi adicionada (a spec original
-mexeu só na *página*, não na *action*).
+Esse gate bloqueia **qualquer** jogo de mata-mata enquanto a fase de grupos não
+estiver 100% `FINISHED`, mesmo quando o confronto já existe no banco com os dois
+times definidos. Por isso os 16-avos já definidos mostram os inputs editáveis no
+card (a `MatchCard` só trava por `lockAt`/`status`), mas o servidor rejeita →
+**"Erro ao salvar"**.
+
+O gate é, na prática, **redundante**: o `sync` só cria/atualiza um `Match` quando
+**os dois times estão resolvidos** (`if (!homeTeamId || !awayTeamId) continue;`
+em `sync.ts`). Logo, todo `Match` real no banco já tem confronto definido. Os
+confrontos ainda indefinidos existem só como partidas **virtuais** em memória
+(ids `virtual-*`), que nem chegam ao `upsertBet` (`findUnique` retorna `null` →
+"Jogo não encontrado"). Ou seja, a autoridade correta para o mata-mata é a
+checagem **por jogo** de `lockAt`/`status` que já roda logo em seguida.
 
 ### Correção
 
-Em `upsertBet`, trocar `isGroupStageComplete()` por `isKnockoutUnlocked()`, de
-modo que o servidor use o mesmo critério da UI.
+Remover o gate global de mata-mata do `upsertBet`. A checagem por jogo
+(`new Date() >= match.lockAt || match.status !== "SCHEDULED"`), que já existe,
+passa a ser a única — exatamente "palpita enquanto o confronto definido estiver
+aberto".
 
 ```diff
 - import { isGroupStageComplete } from "@/server/services/matches";
-+ import { isKnockoutUnlocked } from "@/server/services/matches";
-...
+  ...
 - if (match.stage !== "GROUP" && !(await isGroupStageComplete())) {
-+ if (match.stage !== "GROUP" && !(await isKnockoutUnlocked())) {
-    return { ok: false, error: "Os palpites das fases finais abrem após a fase de grupos" };
+-   return { ok: false, error: "Os palpites das fases finais abrem após a fase de grupos" };
+- }
+-
+  if (new Date() >= match.lockAt || match.status !== "SCHEDULED") {
+    return { ok: false, error: "Palpites encerrados para este jogo" };
   }
 ```
 
+> Nota: a página do mata-mata e seu banner informativo continuam usando
+> `isKnockoutUnlocked()`/`groupComplete` (sem mudança). Como confrontos
+> indefinidos são apenas virtuais (não editáveis), nenhum palpite inválido fica
+> habilitado.
+
 ### Teste de regressão
 
-Teste do `upsertBet` (ou de uma função pura extraída do gate) cobrindo:
-jogo de mata-mata `SCHEDULED`, fase de grupos **não** completa, mas após
-`KNOCKOUT_UNLOCK_DATE` → palpite **salva** (antes da correção, falhava).
+Teste do `upsertBet` cobrindo: jogo de mata-mata real `SCHEDULED` com confronto
+definido, fase de grupos **não** completa e **antes** de `KNOCKOUT_UNLOCK_DATE`
+→ palpite **salva** (antes da correção, falhava com "abrem após a fase de
+grupos"). E: mesmo jogo com `lockAt` no passado → continua rejeitando
+("Palpites encerrados para este jogo").
 
 ---
 
@@ -202,7 +227,7 @@ e `MatchWithBet` ganha `penaltyWinner: Advance | null`.
 | `prisma/schema.prisma` + nova migração | enum `Advance`, `Bet.advances`, `Match.penaltyWinner` |
 | `src/lib/constants.ts` | `POINTS_PENALTY_ADVANCE = 1` |
 | `src/lib/validations.ts` | `advances` opcional no `betSchema` |
-| `src/server/actions/bets.ts` | gate `isKnockoutUnlocked`; validação + persistência de `advances` |
+| `src/server/actions/bets.ts` | remove gate global de mata-mata (deixa só a checagem por jogo); validação + persistência de `advances` |
 | `src/server/services/scoring.ts` | bônus de pênaltis em `computeBetPoints` + `scoreFinishedMatches` |
 | `src/server/services/matches.ts` | seleciona/expõe `advances` e `penaltyWinner` |
 | `src/server/providers/football/{types,football-data}.ts` | `penaltyWinner` no `ProviderMatch` |
