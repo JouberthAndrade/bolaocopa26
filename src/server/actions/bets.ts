@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUserId, requireMembership } from "@/server/guards";
-import { isGroupStageComplete } from "@/server/services/matches";
+import { isBetClosed } from "@/lib/bet-gate";
 import { betSchema, championBetSchema } from "@/lib/validations";
 import { bonusDeadlineFor } from "@/lib/constants";
 
@@ -32,12 +32,7 @@ export async function upsertBet(input: unknown): Promise<ActionResult> {
   });
   if (!match) return { ok: false, error: "Jogo não encontrado" };
 
-  // Fases finais só abrem após o término da fase de grupos.
-  if (match.stage !== "GROUP" && !(await isGroupStageComplete())) {
-    return { ok: false, error: "Os palpites das fases finais abrem após a fase de grupos" };
-  }
-
-  if (new Date() >= match.lockAt || match.status !== "SCHEDULED") {
+  if (isBetClosed(match)) {
     return { ok: false, error: "Palpites encerrados para este jogo" };
   }
 
