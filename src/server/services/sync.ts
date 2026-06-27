@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { countryNamePtBR } from "@/lib/country-codes";
 import { getFootballProvider } from "@/server/providers/football/football-data";
+import { decideResultWrite } from "@/server/services/result-confirmation";
 
 const LOCK_MINUTES_BEFORE = 20;
 const TOURNAMENT_NAME = "Copa do Mundo FIFA 2026";
@@ -89,13 +90,25 @@ export async function syncFromProvider() {
 
     const existing = await db.match.findUnique({
       where: { externalId: m.externalId },
-      select: { status: true },
+      select: {
+        status: true,
+        homeScore: true,
+        awayScore: true,
+        resultConfirmed: true,
+        scored: true,
+      },
     });
-    // Jogo já finalizado é autoritativo: nunca sobrescrevemos placar/status.
-    // Isso protege resultados lançados manualmente (admin/set-result, usado
-    // quando o provedor marca FINISHED mas vem sem placar) e a pontuação já
-    // calculada do bolão — um novo sync não reverte nem zera nada disso.
-    const alreadyFinished = existing?.status === "FINISHED";
+
+    // Double-check de resultado: decide se o placar/status do provedor pode ser
+    // escrito ou se o jogo já está confirmado (travado). Um placar FINISHED só é
+    // confirmado após ser visto IGUAL em dois ticks consecutivos — isso evita
+    // pontuar placar provisório (gol anulado pelo VAR depois do FINISHED) e
+    // protege resultados manuais/já confirmados. Ver result-confirmation.ts.
+    const decision = decideResultWrite(existing, {
+      status: m.status,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+    });
 
     // Metadados seguros de atualizar em qualquer estado do jogo.
     const meta = {
@@ -109,25 +122,30 @@ export async function syncFromProvider() {
       lockAt,
     };
 
-    // Campos de resultado: só entram quando o jogo ainda NÃO está finalizado.
-    const result = {
-      homeScore: m.homeScore,
-      awayScore: m.awayScore,
-      status: m.status,
-    };
+    // Campos de resultado a escrever quando o jogo ainda NÃO está confirmado.
+    const result = decision.locked
+      ? null
+      : {
+          homeScore: decision.homeScore,
+          awayScore: decision.awayScore,
+          status: decision.status,
+          resultConfirmed: decision.resultConfirmed,
+          ...(decision.scored !== undefined ? { scored: decision.scored } : {}),
+        };
 
     await db.match.upsert({
       where: { externalId: m.externalId },
-      update: alreadyFinished ? meta : { ...meta, ...result },
+      update: result ? { ...meta, ...result } : meta,
       create: {
         externalId: m.externalId,
         tournamentId,
         ...meta,
-        ...result,
+        // Em create, decision nunca é locked (existing == null).
+        ...(result ?? {}),
       },
     });
     upserted++;
-    if (!alreadyFinished && m.status === "FINISHED") newlyFinished++;
+    if (existing?.status !== "FINISHED" && m.status === "FINISHED") newlyFinished++;
   }
 
   return { teams: providerTeams.length, matches: upserted, newlyFinished };

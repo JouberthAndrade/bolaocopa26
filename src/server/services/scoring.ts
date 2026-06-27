@@ -39,7 +39,16 @@ export function computeBetPoints(
  */
 export async function scoreFinishedMatches() {
   const matches = await db.match.findMany({
-    where: { status: "FINISHED", scored: false, homeScore: { not: null }, awayScore: { not: null } },
+    // resultConfirmed: só pontua placar confirmado pelo double-check do sync
+    // (visto igual em dois ticks) — evita pontuar placar provisório do VAR.
+    // Resultados manuais (admin/set-result) entram já confirmados.
+    where: {
+      status: "FINISHED",
+      scored: false,
+      resultConfirmed: true,
+      homeScore: { not: null },
+      awayScore: { not: null },
+    },
     select: { id: true, homeScore: true, awayScore: true },
   });
 

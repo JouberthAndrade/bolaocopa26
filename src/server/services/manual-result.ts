@@ -64,6 +64,10 @@ export async function applyManualResults(
         awayScore: r.awayScore,
         status: "FINISHED",
         scored: false, // força o scoring a (re)pontuar este jogo
+        // Lançamento manual é autoritativo: pula o double-check do sync e pontua
+        // já no próximo passo. Também trava o resultado contra sobrescrita pelo
+        // provedor (sync respeita resultConfirmed = true).
+        resultConfirmed: true,
       },
     });
     applied.push({

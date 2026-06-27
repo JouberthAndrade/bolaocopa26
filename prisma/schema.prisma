@@ -225,6 +225,10 @@ model Match {
   lockAt       DateTime // kickoff - 20min (calculado na escrita)
   status       MatchStatus @default(SCHEDULED)
   scored       Boolean     @default(false) // idempotência do scoring
+  // Double-check de resultado: só pontua placar FINISHED confirmado em dois
+  // ticks consecutivos do sync — evita pontuar placar provisório (gol anulado
+  // pelo VAR depois que a API já marcou FINISHED). Ver result-confirmation.ts.
+  resultConfirmed Boolean  @default(false)
 
   tournament Tournament @relation(fields: [tournamentId], references: [id])
   homeTeam   Team       @relation("HomeTeam", fields: [homeTeamId], references: [id])
