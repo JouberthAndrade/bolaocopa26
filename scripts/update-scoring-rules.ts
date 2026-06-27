@@ -35,7 +35,8 @@ async function main() {
   // 2) Força repontuação dos jogos já finalizados.
   const reset = await db.match.updateMany({
     where: { status: "FINISHED", scored: true },
-    data: { scored: false },
+    // resultConfirmed: true → repontuação explícita pula o double-check do sync.
+    data: { scored: false, resultConfirmed: true },
   });
   console.log(`   • Jogos finalizados marcados para repontuar: ${reset.count}`);
 

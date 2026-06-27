@@ -159,7 +159,8 @@ async function main() {
   if (finishedToRescore.size > 0) {
     await db.match.updateMany({
       where: { id: { in: [...finishedToRescore] } },
-      data: { scored: false },
+      // resultConfirmed: true → repontuação explícita pula o double-check do sync.
+      data: { scored: false, resultConfirmed: true },
     });
     const res = await scoreFinishedMatches();
     console.log(`🧮 Re-pontuação: ${res.scoredMatches} jogo(s), ${res.affectedPools} bolão(ões).`);
