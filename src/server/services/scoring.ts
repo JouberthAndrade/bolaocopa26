@@ -1,5 +1,6 @@
-import type { ScoringRule } from "@prisma/client";
+import type { Advance, ScoringRule } from "@prisma/client";
 import { db } from "@/lib/db";
+import { POINTS_PENALTY_ADVANCE } from "@/lib/constants";
 
 type Outcome = "HOME" | "AWAY" | "DRAW";
 
@@ -11,9 +12,11 @@ function outcome(home: number, away: number): Outcome {
 
 /**
  * Pontuação de um palpite (função pura — fácil de testar).
- * - placar exato: pointsCorrectResult/Draw + pointsExactScore (bônus)
+ * - placar exato: pointsCorrectResult/Draw + pointsExactScore (bônus aditivo)
  * - acertou resultado (vitória): pointsCorrectResult
  * - acertou empate (sem placar exato): pointsCorrectDraw
+ * - bônus de mata-mata: SOMADO POR CIMA — jogo decidido nos pênaltis (penaltyWinner != null),
+ *   palpite foi empate e acertou quem avançou. Independente do bônus de placar exato.
  */
 export function computeBetPoints(
   rule: Pick<
@@ -22,6 +25,11 @@ export function computeBetPoints(
   >,
   guess: { home: number; away: number },
   actual: { home: number; away: number },
+  penalty?: {
+    betAdvances?: Advance | null;
+    penaltyWinner?: Advance | null;
+    bonus?: number;
+  },
 ): number {
   const exact = guess.home === actual.home && guess.away === actual.away;
   const sameOutcome = outcome(guess.home, guess.away) === outcome(actual.home, actual.away);
@@ -30,7 +38,20 @@ export function computeBetPoints(
 
   const isDraw = actual.home === actual.away;
   const base = isDraw ? rule.pointsCorrectDraw : rule.pointsCorrectResult;
-  return exact ? base + rule.pointsExactScore : base;
+  let points = exact ? base + rule.pointsExactScore : base;
+
+  // Bônus de mata-mata: jogo decidido nos pênaltis (penaltyWinner != null),
+  // palpite foi empate e o usuário acertou quem avançou. Somado por cima.
+  if (
+    penalty?.penaltyWinner != null &&
+    guess.home === guess.away &&
+    penalty.betAdvances != null &&
+    penalty.betAdvances === penalty.penaltyWinner
+  ) {
+    points += penalty.bonus ?? 0;
+  }
+
+  return points;
 }
 
 /**
@@ -49,7 +70,7 @@ export async function scoreFinishedMatches() {
       homeScore: { not: null },
       awayScore: { not: null },
     },
-    select: { id: true, homeScore: true, awayScore: true },
+    select: { id: true, homeScore: true, awayScore: true, penaltyWinner: true },
   });
 
   let scoredMatches = 0;
@@ -71,6 +92,11 @@ export async function scoreFinishedMatches() {
           rule,
           { home: bet.homeGuess, away: bet.awayGuess },
           actual,
+          {
+            betAdvances: bet.advances,
+            penaltyWinner: match.penaltyWinner,
+            bonus: POINTS_PENALTY_ADVANCE,
+          },
         );
         if (points !== bet.pointsEarned) {
           await tx.bet.update({ where: { id: bet.id }, data: { pointsEarned: points } });

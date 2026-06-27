@@ -48,3 +48,72 @@ describe("computeBetPoints — regras configuráveis (sem hardcode)", () => {
     expect(computeBetPoints(custom, { home: 2, away: 2 }, { home: 2, away: 2 })).toBe(7);
   });
 });
+
+describe("computeBetPoints — bônus de pênaltis (mata-mata)", () => {
+  // Jogo real foi aos pênaltis: actual é empate (1x1) e penaltyWinner definido.
+  // Palpite 2x2 (acertou o empate, sem placar exato) isola o bônus de pênaltis.
+  it("empate certo (sem exato) + acertou quem passou → 2 + 1 = 3", () => {
+    expect(
+      computeBetPoints(rule, { home: 2, away: 2 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(3);
+  });
+
+  it("empate certo (sem exato) + errou quem passou → só base empate (2)", () => {
+    expect(
+      computeBetPoints(rule, { home: 2, away: 2 }, { home: 1, away: 1 }, {
+        betAdvances: "AWAY",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(2);
+  });
+
+  it("jogo não foi aos pênaltis (penaltyWinner null) → sem bônus", () => {
+    expect(
+      computeBetPoints(rule, { home: 2, away: 2 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: null,
+        bonus: 1,
+      }),
+    ).toBe(2);
+  });
+
+  it("placar exato no empate + acertou quem passou → 2 + 1 (exato) + 1 (pênaltis) = 4", () => {
+    expect(
+      computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(4);
+  });
+
+  it("palpite não foi empate → sem bônus mesmo com penaltyWinner", () => {
+    expect(
+      computeBetPoints(rule, { home: 2, away: 1 }, { home: 1, away: 1 }, {
+        betAdvances: "HOME",
+        penaltyWinner: "HOME",
+        bonus: 1,
+      }),
+    ).toBe(0);
+  });
+
+  it("bônus de placar exato continua valendo com o 4º parâmetro presente (sem pênaltis)", () => {
+    // Regressão: a presença do 4º parâmetro não pode anular o bônus de exato comum.
+    expect(
+      computeBetPoints(rule, { home: 2, away: 0 }, { home: 2, away: 0 }, {
+        betAdvances: null,
+        penaltyWinner: null,
+        bonus: 1,
+      }),
+    ).toBe(3);
+  });
+
+  it("sem o 4º parâmetro, comportamento antigo é preservado (placar exato no empate)", () => {
+    expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 })).toBe(3);
+  });
+});

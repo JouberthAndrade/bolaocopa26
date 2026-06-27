@@ -182,6 +182,12 @@ enum MatchStatus {
   POSTPONED
 }
 
+// Quem avança num confronto de mata-mata (palpite do usuário e resultado real).
+enum Advance {
+  HOME
+  AWAY
+}
+
 model Tournament {
   id        String   @id @default(cuid())
   name      String // "Copa do Mundo FIFA 2026"
@@ -229,6 +235,10 @@ model Match {
   // ticks consecutivos do sync — evita pontuar placar provisório (gol anulado
   // pelo VAR depois que a API já marcou FINISHED). Ver result-confirmation.ts.
   resultConfirmed Boolean  @default(false)
+  // Vencedor real do shootout — preenchido só quando o jogo de mata-mata foi
+  // decidido nos pênaltis. homeScore/awayScore guardam o placar EMPATADO do
+  // tempo normal/prorrogação; os pênaltis ficam só aqui.
+  penaltyWinner Advance?
 
   tournament Tournament @relation(fields: [tournamentId], references: [id])
   homeTeam   Team       @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -251,6 +261,9 @@ model Bet {
   pointsEarned Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  // Pick do usuário de quem avança nos pênaltis — preenchido só em palpite de
+  // empate no mata-mata; null nos demais casos.
+  advances     Advance?
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   pool  Pool  @relation(fields: [poolId], references: [id], onDelete: Cascade)

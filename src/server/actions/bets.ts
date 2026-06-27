@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUserId, requireMembership } from "@/server/guards";
-import { isGroupStageComplete } from "@/server/services/matches";
+import { isBetClosed, isKnockoutDraw } from "@/lib/bet-gate";
 import { betSchema, championBetSchema } from "@/lib/validations";
 import { bonusDeadlineFor } from "@/lib/constants";
 
@@ -22,7 +22,7 @@ export async function upsertBet(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Palpite inválido" };
   }
-  const { poolId, matchId, homeGuess, awayGuess } = parsed.data;
+  const { poolId, matchId, homeGuess, awayGuess, advances } = parsed.data;
 
   await requireMembership(poolId, userId);
 
@@ -32,19 +32,21 @@ export async function upsertBet(input: unknown): Promise<ActionResult> {
   });
   if (!match) return { ok: false, error: "Jogo não encontrado" };
 
-  // Fases finais só abrem após o término da fase de grupos.
-  if (match.stage !== "GROUP" && !(await isGroupStageComplete())) {
-    return { ok: false, error: "Os palpites das fases finais abrem após a fase de grupos" };
-  }
-
-  if (new Date() >= match.lockAt || match.status !== "SCHEDULED") {
+  if (isBetClosed(match)) {
     return { ok: false, error: "Palpites encerrados para este jogo" };
   }
 
+  const knockoutDraw = isKnockoutDraw(match.stage, homeGuess, awayGuess);
+  if (knockoutDraw && !advances) {
+    return { ok: false, error: "Escolha quem avança nos pênaltis" };
+  }
+  // Só persiste o pick em empate de mata-mata; nos demais casos, limpa.
+  const advancesToStore = knockoutDraw ? advances! : null;
+
   await db.bet.upsert({
     where: { userId_poolId_matchId: { userId, poolId, matchId } },
-    update: { homeGuess, awayGuess },
-    create: { userId, poolId, matchId, homeGuess, awayGuess },
+    update: { homeGuess, awayGuess, advances: advancesToStore },
+    create: { userId, poolId, matchId, homeGuess, awayGuess, advances: advancesToStore },
   });
 
   revalidatePath("/");

@@ -58,6 +58,7 @@ export const betSchema = z.object({
   matchId: z.string().min(1),
   homeGuess: z.number().int().min(0).max(99),
   awayGuess: z.number().int().min(0).max(99),
+  advances: z.enum(["HOME", "AWAY"]).optional(),
 });
 
 export const championBetSchema = z.object({

@@ -2,6 +2,7 @@ import type { MatchStage, MatchStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { fifaToFlagCdn } from "@/lib/country-codes";
 import { normalizeGroup } from "@/lib/group";
+import { mapPenaltyWinner } from "@/lib/football-score";
 import type { FootballProvider, ProviderMatch, ProviderTeam } from "./types";
 
 const BASE_URL = "https://api.football-data.org/v4";
@@ -67,7 +68,11 @@ interface FDMatch {
   matchday: number | null;
   homeTeam: { id: number | null };
   awayTeam: { id: number | null };
-  score: { fullTime: { home: number | null; away: number | null } };
+  score: {
+    winner?: string | null;
+    duration?: string | null;
+    fullTime: { home: number | null; away: number | null };
+  };
   venue?: string | null;
 }
 
@@ -124,6 +129,7 @@ export class FootballDataProvider implements FootballProvider {
         venue: m.venue ?? null,
         kickoffAt: new Date(m.utcDate),
         status: mapStatus(m.status),
+        penaltyWinner: mapPenaltyWinner(m.score),
       }));
   }
 }

@@ -1,4 +1,4 @@
-import type { MatchStage, MatchStatus } from "@prisma/client";
+import type { Advance, MatchStage, MatchStatus } from "@prisma/client";
 
 export interface ProviderTeam {
   externalId: string;
@@ -20,6 +20,7 @@ export interface ProviderMatch {
   venue?: string | null;
   kickoffAt: Date;
   status: MatchStatus;
+  penaltyWinner: Advance | null;
 }
 
 /**
