@@ -39,7 +39,7 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
         awayTeam: { select: { name: true, countryCode: true, crestUrl: true } },
         bets: {
           where: { userId: opts.userId, poolId: opts.poolId },
-          select: { homeGuess: true, awayGuess: true, pointsEarned: true },
+          select: { homeGuess: true, awayGuess: true, pointsEarned: true, advances: true },
         },
       },
     }),
@@ -56,6 +56,7 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
     venue: m.venue,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
+    penaltyWinner: m.penaltyWinner,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,

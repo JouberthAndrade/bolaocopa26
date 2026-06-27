@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { KNOCKOUT_UNLOCK_DATE } from "@/lib/constants";
 import { computeGroupStandings } from "@/lib/group";
 import { BRACKET_BY_STAGE, resolveSlot } from "@/lib/bracket";
-import type { MatchStage, MatchStatus } from "@prisma/client";
+import type { Advance, MatchStage, MatchStatus } from "@prisma/client";
 
 export async function getUserPools(userId: string) {
   return db.pool.findMany({
@@ -37,7 +37,7 @@ export async function getMatchesWithBets(opts: {
       awayTeam: { select: { name: true, countryCode: true, crestUrl: true } },
       bets: {
         where: { userId: opts.userId, poolId: opts.poolId },
-        select: { homeGuess: true, awayGuess: true, pointsEarned: true },
+        select: { homeGuess: true, awayGuess: true, pointsEarned: true, advances: true },
       },
     },
   });
@@ -53,6 +53,7 @@ export async function getMatchesWithBets(opts: {
     venue: m.venue,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
+    penaltyWinner: m.penaltyWinner,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -70,9 +71,10 @@ export interface MatchWithBet {
   venue: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  penaltyWinner: Advance | null;
   home: { name: string; countryCode: string; crestUrl: string | null };
   away: { name: string; countryCode: string; crestUrl: string | null };
-  bet: { homeGuess: number; awayGuess: number; pointsEarned: number } | null;
+  bet: { homeGuess: number; awayGuess: number; pointsEarned: number; advances: Advance | null } | null;
   // Virtual match fields (in-memory only, never persisted):
   isVirtual?: true;
   homeLabel?: string;
@@ -125,7 +127,7 @@ export async function getAllMatchesWithBets(opts: {
       awayTeam: { select: { name: true, countryCode: true, crestUrl: true } },
       bets: {
         where: { userId: opts.userId, poolId: opts.poolId },
-        select: { homeGuess: true, awayGuess: true, pointsEarned: true },
+        select: { homeGuess: true, awayGuess: true, pointsEarned: true, advances: true },
       },
     },
   });
@@ -141,6 +143,7 @@ export async function getAllMatchesWithBets(opts: {
     venue: m.venue,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
+    penaltyWinner: m.penaltyWinner,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -162,7 +165,7 @@ export async function getUpcomingMatchesWithBets(opts: {
       awayTeam: { select: { name: true, countryCode: true, crestUrl: true } },
       bets: {
         where: { userId: opts.userId, poolId: opts.poolId },
-        select: { homeGuess: true, awayGuess: true, pointsEarned: true },
+        select: { homeGuess: true, awayGuess: true, pointsEarned: true, advances: true },
       },
     },
   });
@@ -177,6 +180,7 @@ export async function getUpcomingMatchesWithBets(opts: {
     venue: m.venue,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
+    penaltyWinner: m.penaltyWinner,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -232,6 +236,7 @@ export async function getKnockoutMatchesWithVirtual(opts: {
         venue: bm.venue,
         homeScore: null,
         awayScore: null,
+        penaltyWinner: null,
         home: {
           name: homeResolved.team?.name ?? homeResolved.label,
           countryCode: homeResolved.team?.countryCode ?? "",
