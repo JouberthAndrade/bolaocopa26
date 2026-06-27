@@ -5,7 +5,11 @@ import { authConfig } from "@/auth.config";
 const { auth } = NextAuth(authConfig);
 
 const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password"];
-const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/_next", "/favicon", "/icons"];
+// /api/cron e /api/admin são endpoints máquina-a-máquina protegidos pelo próprio
+// handler via `Authorization: Bearer <CRON_SECRET>` — não passam pela sessão do
+// next-auth, então precisam ficar fora do gate de login do middleware (senão são
+// redirecionados para /login e o Bearer nunca chega a rodar).
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/api/admin", "/_next", "/favicon", "/icons"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
