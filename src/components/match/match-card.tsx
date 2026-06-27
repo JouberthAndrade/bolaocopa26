@@ -28,13 +28,13 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
   const save = useCallback(
     (h: string, a: string, adv: Advance | "") => {
       if (h === "" || a === "") return;
+      clearTimeout(timer.current);
       const knockoutDraw = isKnockout && h === a;
       // Empate de mata-mata sem escolha de quem avança: não salva ainda.
       if (knockoutDraw && adv === "") {
         setSaveState("idle");
         return;
       }
-      clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         setSaveState("saving");
         startTransition(async () => {
