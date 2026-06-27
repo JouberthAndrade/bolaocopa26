@@ -130,6 +130,7 @@ export async function syncFromProvider() {
           awayScore: decision.awayScore,
           status: decision.status,
           resultConfirmed: decision.resultConfirmed,
+          penaltyWinner: m.penaltyWinner,
           ...(decision.scored !== undefined ? { scored: decision.scored } : {}),
         };
 
