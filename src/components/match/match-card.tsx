@@ -8,6 +8,7 @@ import { STAGE_LABEL } from "@/lib/labels";
 import { isBettable, cn } from "@/lib/utils";
 import { classifyBet } from "@/lib/bet-result";
 import type { MatchWithBet } from "@/server/services/matches";
+import type { Advance } from "@prisma/client";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -18,13 +19,21 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
 
   const [home, setHome] = useState<string>(match.bet?.homeGuess?.toString() ?? "");
   const [away, setAway] = useState<string>(match.bet?.awayGuess?.toString() ?? "");
+  const [advances, setAdvances] = useState<Advance | "">(match.bet?.advances ?? "");
+  const isKnockout = match.stage !== "GROUP";
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [, startTransition] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const save = useCallback(
-    (h: string, a: string) => {
+    (h: string, a: string, adv: Advance | "") => {
       if (h === "" || a === "") return;
+      const knockoutDraw = isKnockout && h === a;
+      // Empate de mata-mata sem escolha de quem avança: não salva ainda.
+      if (knockoutDraw && adv === "") {
+        setSaveState("idle");
+        return;
+      }
       clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         setSaveState("saving");
@@ -34,13 +43,14 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
             matchId: match.id,
             homeGuess: Number(h),
             awayGuess: Number(a),
+            advances: knockoutDraw ? adv : undefined,
           });
           setSaveState(res.ok ? "saved" : "error");
           if (res.ok) setTimeout(() => setSaveState("idle"), 2000);
         });
       }, 600);
     },
-    [match.id, poolId],
+    [match.id, poolId, isKnockout],
   );
 
   const kickoff = new Date(match.kickoffAt);
@@ -117,19 +127,52 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
               </span>
             </div>
           ) : (
-            /* Inputs de palpite */
-            <div className="flex items-center gap-1.5">
-              <ScoreInput
-                value={home}
-                disabled={locked}
-                onChange={(v) => { setHome(v); save(v, away); }}
-              />
-              <span className="text-lg font-light text-muted-foreground">×</span>
-              <ScoreInput
-                value={away}
-                disabled={locked}
-                onChange={(v) => { setAway(v); save(home, v); }}
-              />
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <ScoreInput
+                  value={home}
+                  disabled={locked}
+                  onChange={(v) => {
+                    setHome(v);
+                    const nextAdv = isKnockout && v !== "" && v === away ? advances : "";
+                    setAdvances(nextAdv);
+                    save(v, away, nextAdv);
+                  }}
+                />
+                <span className="text-lg font-light text-muted-foreground">×</span>
+                <ScoreInput
+                  value={away}
+                  disabled={locked}
+                  onChange={(v) => {
+                    setAway(v);
+                    const nextAdv = isKnockout && v !== "" && v === home ? advances : "";
+                    setAdvances(nextAdv);
+                    save(home, v, nextAdv);
+                  }}
+                />
+              </div>
+
+              {!locked && isKnockout && home !== "" && away !== "" && home === away && (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Quem avança nos pênaltis?
+                  </span>
+                  <div className="flex gap-2">
+                    <AdvanceButton
+                      selected={advances === "HOME"}
+                      name={match.home.name}
+                      countryCode={match.home.countryCode}
+                      onClick={() => { setAdvances("HOME"); save(home, away, "HOME"); }}
+                    />
+                    <AdvanceButton
+                      selected={advances === "AWAY"}
+                      name={match.away.name}
+                      countryCode={match.away.countryCode}
+                      onClick={() => { setAdvances("AWAY"); save(home, away, "AWAY"); }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -139,6 +182,23 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
               <div className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 Meu palpite: {match.bet.homeGuess} × {match.bet.awayGuess}
               </div>
+              {match.bet.advances && (
+                <div className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  <Flag
+                    countryCode={
+                      match.bet.advances === "HOME"
+                        ? match.home.countryCode
+                        : match.away.countryCode
+                    }
+                    name={match.bet.advances === "HOME" ? match.home.name : match.away.name}
+                    size={14}
+                  />
+                  <span>
+                    {match.bet.advances === "HOME" ? match.home.name : match.away.name} nos
+                    pênaltis
+                  </span>
+                </div>
+              )}
               {isFinished && (
                 <ResultBadge match={match} />
               )}
@@ -154,9 +214,14 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
           )}
 
           {/* Status do autosave */}
-          {!locked && (
-            <SaveBadge state={saveState} hasBet={!!match.bet} />
-          )}
+          {!locked &&
+            (isKnockout && home !== "" && away !== "" && home === away && advances === "" ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Escolha quem avança nos pênaltis
+              </p>
+            ) : (
+              <SaveBadge state={saveState} hasBet={!!match.bet} />
+            ))}
         </div>
 
         {/* Visitante */}
@@ -258,4 +323,33 @@ function SaveBadge({ state, hasBet }: { state: SaveState; hasBet: boolean }) {
       </p>
     );
   return <p className="text-xs text-muted-foreground">Digite seu palpite</p>;
+}
+
+function AdvanceButton({
+  selected,
+  name,
+  countryCode,
+  onClick,
+}: {
+  selected: boolean;
+  name: string;
+  countryCode: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors",
+        selected
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-input bg-secondary/60 text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Flag countryCode={countryCode} name={name} size={16} />
+      <span>{name}</span>
+    </button>
+  );
 }
