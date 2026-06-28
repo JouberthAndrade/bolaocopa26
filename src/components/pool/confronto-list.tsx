@@ -115,6 +115,7 @@ export function ConfrontoList({
         )}
         {detail && !pending && (
           <MatchupRows
+            match={detail.match}
             rows={
               // Jogo em andamento: pontua provisoriamente no client (Bet.pointsEarned
               // só é persistido pelo servidor após o jogo encerrar). Encerrado: usa
@@ -144,7 +145,9 @@ const BOT_STYLE: Record<BotKind, { card: string; avatar: string; badge: string }
   },
 };
 
-function MatchupRows({ rows }: { rows: MatchupRow[] }) {
+type MatchTeams = MatchupDetail["match"];
+
+function MatchupRows({ match, rows }: { match: MatchTeams; rows: MatchupRow[] }) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">Sem participantes.</p>;
   }
@@ -160,7 +163,7 @@ function MatchupRows({ rows }: { rows: MatchupRow[] }) {
           </h4>
           <ul className="space-y-2">
             {bots.map((r) => (
-              <BotRow key={r.userId} row={r} />
+              <BotRow key={r.userId} row={r} match={match} />
             ))}
           </ul>
         </section>
@@ -175,7 +178,7 @@ function MatchupRows({ rows }: { rows: MatchupRow[] }) {
           )}
           <ul className="space-y-2">
             {humans.map((r) => (
-              <HumanRow key={r.userId} row={r} />
+              <HumanRow key={r.userId} row={r} match={match} />
             ))}
           </ul>
         </section>
@@ -184,7 +187,23 @@ function MatchupRows({ rows }: { rows: MatchupRow[] }) {
   );
 }
 
-function BotRow({ row }: { row: MatchupRow }) {
+/**
+ * Mostra quem o participante apostou que avança nos pênaltis — só aparece em
+ * palpite de empate no mata-mata (Bet.advances). A bandeira/nome vêm do time
+ * da casa ou visitante conforme o pick (HOME/AWAY).
+ */
+function AdvanceChip({ advances, match }: { advances: MatchupRow["advances"]; match: MatchTeams }) {
+  if (!advances) return null;
+  const team = advances === "HOME" ? match.home : match.away;
+  return (
+    <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+      <Flag countryCode={team.countryCode} name={team.name} size={12} />
+      <span className="truncate">{team.name} nos pênaltis</span>
+    </span>
+  );
+}
+
+function BotRow({ row, match }: { row: MatchupRow; match: MatchTeams }) {
   const style = (row.botKind && BOT_STYLE[row.botKind]) ?? BOT_STYLE.CLAUDINHO;
   return (
     <li className={cn("flex items-center gap-3 rounded-lg border p-2.5", style.card)}>
@@ -199,6 +218,7 @@ function BotRow({ row }: { row: MatchupRow }) {
             IA
           </span>
         </div>
+        <AdvanceChip advances={row.advances} match={match} />
       </div>
 
       {row.guess === null ? (
@@ -215,7 +235,7 @@ function BotRow({ row }: { row: MatchupRow }) {
   );
 }
 
-function HumanRow({ row: r }: { row: MatchupRow }) {
+function HumanRow({ row: r, match }: { row: MatchupRow; match: MatchTeams }) {
   return (
     <li
       className={cn(
@@ -237,9 +257,10 @@ function HumanRow({ row: r }: { row: MatchupRow }) {
         </div>
       )}
 
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-        {r.name ?? "Anônimo"}
-      </span>
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{r.name ?? "Anônimo"}</span>
+        <AdvanceChip advances={r.advances} match={match} />
+      </div>
 
       {r.guess === null ? (
         <span className="text-xs text-muted-foreground">Não palpitou</span>

@@ -124,7 +124,13 @@ export async function getMatchupDetail(
     }),
     db.bet.findMany({
       where: { poolId, matchId },
-      select: { userId: true, homeGuess: true, awayGuess: true, pointsEarned: true },
+      select: {
+        userId: true,
+        homeGuess: true,
+        awayGuess: true,
+        pointsEarned: true,
+        advances: true,
+      },
     }),
     db.scoringRule.findUnique({
       where: { poolId },
