@@ -100,6 +100,8 @@ export interface UserBetRow {
   homeGuess: number;
   awayGuess: number;
   pointsEarned: number | null;
+  /** true quando a pontuação já foi consolidada (pointsEarned final). */
+  scored: boolean;
 }
 
 /**
@@ -131,6 +133,7 @@ export async function getUserBetsInPool(
           kickoffAt: true,
           homeScore: true,
           awayScore: true,
+          scored: true,
           homeTeam: { select: { name: true, countryCode: true } },
           awayTeam: { select: { name: true, countryCode: true } },
         },
@@ -152,6 +155,7 @@ export async function getUserBetsInPool(
       homeGuess: b.homeGuess,
       awayGuess: b.awayGuess,
       pointsEarned: b.pointsEarned,
+      scored: b.match.scored,
     })),
   };
 }

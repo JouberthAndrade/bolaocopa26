@@ -6,7 +6,7 @@ import { Flag } from "@/components/flag";
 import { upsertBet } from "@/server/actions/bets";
 import { STAGE_LABEL } from "@/lib/labels";
 import { isBettable, cn } from "@/lib/utils";
-import { classifyBet } from "@/lib/bet-result";
+import { classifyBet, isAwaitingConfirmation } from "@/lib/bet-result";
 import type { MatchWithBet } from "@/server/services/matches";
 import type { Advance } from "@prisma/client";
 
@@ -251,6 +251,18 @@ export function MatchCard({ match, poolId }: { match: MatchWithBet; poolId: stri
  */
 function ResultBadge({ match }: { match: MatchWithBet }) {
   if (!match.bet) return null;
+
+  // Jogo encerrado mas ainda sem pontuação consolidada: mostra "aguardando
+  // confirmação" em vez de "+0 pts" (que parece que quem cravou não pontuou).
+  if (isAwaitingConfirmation(match)) {
+    return (
+      <div className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+        <Clock className="h-3 w-3 animate-pulse" />
+        <span>Aguardando confirmação do resultado</span>
+      </div>
+    );
+  }
+
   const result = classifyBet(
     { home: match.bet.homeGuess, away: match.bet.awayGuess },
     { home: match.homeScore, away: match.awayScore, finished: true },

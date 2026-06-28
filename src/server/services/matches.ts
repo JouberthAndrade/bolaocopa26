@@ -54,6 +54,7 @@ export async function getMatchesWithBets(opts: {
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     penaltyWinner: m.penaltyWinner,
+    scored: m.scored,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -72,6 +73,8 @@ export interface MatchWithBet {
   homeScore: number | null;
   awayScore: number | null;
   penaltyWinner: Advance | null;
+  /** true quando a pontuação já foi consolidada pelo scoring (pointsEarned final). */
+  scored: boolean;
   home: { name: string; countryCode: string; crestUrl: string | null };
   away: { name: string; countryCode: string; crestUrl: string | null };
   bet: { homeGuess: number; awayGuess: number; pointsEarned: number; advances: Advance | null } | null;
@@ -144,6 +147,7 @@ export async function getAllMatchesWithBets(opts: {
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     penaltyWinner: m.penaltyWinner,
+    scored: m.scored,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -181,6 +185,7 @@ export async function getUpcomingMatchesWithBets(opts: {
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     penaltyWinner: m.penaltyWinner,
+    scored: m.scored,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
@@ -237,6 +242,7 @@ export async function getKnockoutMatchesWithVirtual(opts: {
         homeScore: null,
         awayScore: null,
         penaltyWinner: null,
+        scored: false,
         home: {
           name: homeResolved.team?.name ?? homeResolved.label,
           countryCode: homeResolved.team?.countryCode ?? "",

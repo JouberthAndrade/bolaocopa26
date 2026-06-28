@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { Wifi } from "lucide-react";
+import { Wifi, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Flag } from "@/components/flag";
@@ -214,9 +214,11 @@ export function RankingTable({
         )}
 
         {!loading && !error && bets && bets.length > 0 && (() => {
+          // Jogos encerrados mas ainda sem pontuação consolidada não contam como
+          // acerto nem erro (a action só retorna jogos FINISHED → !scored = aguardando).
           const totalPoints = bets.reduce((sum, b) => sum + (b.pointsEarned ?? 0), 0);
-          const hits = bets.filter((b) => (b.pointsEarned ?? 0) > 0).length;
-          const misses = bets.filter((b) => (b.pointsEarned ?? 0) === 0).length;
+          const hits = bets.filter((b) => b.scored && (b.pointsEarned ?? 0) > 0).length;
+          const misses = bets.filter((b) => b.scored && (b.pointsEarned ?? 0) === 0).length;
           return (
             <>
               <div className="space-y-2">
@@ -249,18 +251,25 @@ export function RankingTable({
                       <Flag countryCode={b.awayCode} name={b.awayName} size={16} />
                     </div>
 
-                    {/* Pontos */}
+                    {/* Pontos (ou aguardando confirmação quando ainda não pontuado) */}
                     <div className="ml-1 w-10 shrink-0 text-right">
-                      <span
-                        className={cn(
-                          "text-xs font-semibold",
-                          (b.pointsEarned ?? 0) > 0
-                            ? "text-green-400"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {b.pointsEarned ?? 0} pts
-                      </span>
+                      {b.scored ? (
+                        <span
+                          className={cn(
+                            "text-xs font-semibold",
+                            (b.pointsEarned ?? 0) > 0
+                              ? "text-green-400"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {b.pointsEarned ?? 0} pts
+                        </span>
+                      ) : (
+                        <Clock
+                          className="ml-auto h-3.5 w-3.5 animate-pulse text-amber-600 dark:text-amber-400"
+                          aria-label="Aguardando confirmação do resultado"
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
