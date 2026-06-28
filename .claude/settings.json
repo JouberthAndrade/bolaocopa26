@@ -12,7 +12,23 @@
       "mcp__plugin_context-mode_context-mode__ctx_execute_file",
       "mcp__plugin_context-mode_context-mode__ctx_index",
       "Skill(run)",
-      "Skill(run:*)"
+      "Skill(run:*)",
+      "Bash(cat \"$\\(git rev-parse --show-toplevel\\)/.superpowers/sdd/progress.md\")",
+      "Bash(ls \"C:/Users/Jouberth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts\")",
+      "Read(//c/Users/Jouberth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/**)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npx prisma *)",
+      "Bash(git commit -m ' *)",
+      "Bash(bash __TRACKED_VAR__/scripts/review-package b943bb3 HEAD)",
+      "Bash(bash __TRACKED_VAR__/scripts/review-package 95aae64 HEAD)",
+      "Bash(bash __TRACKED_VAR__/scripts/review-package 8692c4f HEAD)",
+      "Bash(bash __TRACKED_VAR__/scripts/review-package e472e9e HEAD)",
+      "Bash(git commit -m 'feat: expoe advances e penaltyWinner em MatchWithBet *)",
+      "Bash(bash __TRACKED_VAR__/scripts/review-package b42a016 HEAD)",
+      "PowerShell(cd C:\\\\Projetos\\\\BolaoCopa2026; npx eslint src/components/match/match-card.tsx 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(ls C:\\\\Projetos\\\\BolaoCopa2026 -Name | Where-Object { $_ -match \"next\" -or $_ -match \"eslint\" -or $_ -match \"tsconfig\" })",
+      "Read(//c/Users/Jouberth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/requesting-code-review/**)"
     ]
   }
 }

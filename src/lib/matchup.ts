@@ -11,7 +11,7 @@ import {
   type BetResult,
   type ResultScoringRule,
 } from "@/lib/bet-result";
-import type { BotKind } from "@prisma/client";
+import type { Advance, BotKind } from "@prisma/client";
 
 export interface MatchupMember {
   userId: string;
@@ -28,6 +28,8 @@ export interface MatchupBet {
   homeGuess: number;
   awayGuess: number;
   pointsEarned: number;
+  /** pick de quem avança nos pênaltis — só em palpite de empate no mata-mata */
+  advances?: Advance | null;
 }
 
 export interface MatchupRow {
@@ -38,6 +40,8 @@ export interface MatchupRow {
   botKind: BotKind | null;
   /** palpite do participante, ou null se ele não palpitou este jogo */
   guess: { home: number; away: number } | null;
+  /** quem o participante apostou que avança nos pênaltis (mata-mata empatado) */
+  advances: Advance | null;
   points: number;
   /** classificação do palpite (exato/acertou/errou); null quando não palpitou */
   result: BetResult | null;
@@ -66,11 +70,12 @@ export function buildMatchupRows(
     };
     const bet = byUser.get(m.userId);
     if (!bet) {
-      return { ...base, guess: null, points: 0, result: null };
+      return { ...base, guess: null, advances: null, points: 0, result: null };
     }
     return {
       ...base,
       guess: { home: bet.homeGuess, away: bet.awayGuess },
+      advances: bet.advances ?? null,
       points: bet.pointsEarned,
       result: actual
         ? classifyBet(

@@ -67,6 +67,22 @@ describe("buildMatchupRows", () => {
     expect(rows[rows.length - 1].userId).toBe("carla");
   });
 
+  it("carrega o pick de quem avança nos pênaltis (mata-mata empatado)", () => {
+    const bets: MatchupBet[] = [
+      { userId: "ana", homeGuess: 1, awayGuess: 1, pointsEarned: 0, advances: "HOME" },
+      { userId: "bruno", homeGuess: 0, awayGuess: 0, pointsEarned: 0, advances: "AWAY" },
+      { userId: "carla", homeGuess: 2, awayGuess: 1, pointsEarned: 0 },
+    ];
+    const rows = buildMatchupRows(members, bets, null);
+    const byId = Object.fromEntries(rows.map((r) => [r.userId, r]));
+    expect(byId.ana.advances).toBe("HOME");
+    expect(byId.bruno.advances).toBe("AWAY");
+    // sem pick de pênaltis (não foi empate) → null
+    expect(byId.carla.advances).toBeNull();
+    // quem não palpitou também é null
+    expect(byId.diego.advances).toBeNull();
+  });
+
   it("classifica o resultado de cada palpite", () => {
     const bets: MatchupBet[] = [
       { userId: "ana", homeGuess: 2, awayGuess: 0, pointsEarned: 4 },
