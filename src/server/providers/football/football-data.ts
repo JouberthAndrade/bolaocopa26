@@ -2,7 +2,7 @@ import type { MatchStage, MatchStatus } from "@prisma/client";
 import { env } from "@/lib/env";
 import { fifaToFlagCdn } from "@/lib/country-codes";
 import { normalizeGroup } from "@/lib/group";
-import { mapPenaltyWinner } from "@/lib/football-score";
+import { mapPenaltyWinner, resolveMatchScore } from "@/lib/football-score";
 import type { FootballProvider, ProviderMatch, ProviderTeam } from "./types";
 
 const BASE_URL = "https://api.football-data.org/v4";
@@ -71,7 +71,10 @@ interface FDMatch {
   score: {
     winner?: string | null;
     duration?: string | null;
+    // Em jogos de mata-mata, `fullTime` SOMA o placar dos pênaltis; `regularTime`
+    // traz o placar do tempo normal/prorrogação (o empate que foi aos pênaltis).
     fullTime: { home: number | null; away: number | null };
+    regularTime?: { home: number | null; away: number | null } | null;
   };
   venue?: string | null;
 }
@@ -120,8 +123,9 @@ export class FootballDataProvider implements FootballProvider {
         externalId: String(m.id),
         homeTeamExternalId: String(m.homeTeam.id),
         awayTeamExternalId: String(m.awayTeam.id),
-        homeScore: m.score.fullTime.home,
-        awayScore: m.score.fullTime.away,
+        // Placar do confronto sem contar os pênaltis (ver resolveMatchScore).
+        homeScore: resolveMatchScore(m.score).home,
+        awayScore: resolveMatchScore(m.score).away,
         stage: mapStage(m.stage),
         // Limpa o prefixo "GROUP_" já na origem → o banco grava "A", "B", …
         group: m.group ? normalizeGroup(m.group) : null,
