@@ -14,3 +14,30 @@ export function mapPenaltyWinner(score: {
   if (score.winner === "AWAY_TEAM") return "AWAY";
   return null;
 }
+
+interface ScoreLine {
+  home: number | null;
+  away: number | null;
+}
+
+/**
+ * Resolve o placar do confronto a ser gravado/pontuado — SEM contar os pênaltis.
+ *
+ * - `PENALTY_SHOOTOUT`: o jogo terminou empatado e foi decidido nas penalidades.
+ *   A Football-Data SOMA o shootout no `fullTime` (ex.: 1-1 no tempo normal +
+ *   2-3 nos pênaltis = 3-4), então usamos `regularTime` (o empate de fato). O
+ *   vencedor do confronto vem de `mapPenaltyWinner` → bônus em computeBetPoints.
+ * - `REGULAR` / `EXTRA_TIME`: `fullTime` já é o placar correto (inclui os gols da
+ *   prorrogação quando houver, e não tem pênaltis para somar).
+ */
+export function resolveMatchScore(score: {
+  winner?: string | null;
+  duration?: string | null;
+  fullTime?: ScoreLine | null;
+  regularTime?: ScoreLine | null;
+}): ScoreLine {
+  if (score.duration === "PENALTY_SHOOTOUT" && score.regularTime) {
+    return { home: score.regularTime.home, away: score.regularTime.away };
+  }
+  return { home: score.fullTime?.home ?? null, away: score.fullTime?.away ?? null };
+}
