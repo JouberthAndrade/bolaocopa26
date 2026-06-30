@@ -1,27 +1,22 @@
 import Link from "next/link";
-import { ListChecks, ChevronRight } from "lucide-react";
+import { ListChecks, Receipt, ChevronRight } from "lucide-react";
 import { requireUserId } from "@/server/guards";
 import {
   getUserPools,
   getAllMatchesWithBets,
   getTournamentTeams,
-  getUpcomingMatchesWithBets,
 } from "@/server/services/matches";
-import { getRanking } from "@/server/services/ranking";
 import { getBonusStatus } from "@/server/services/bonus";
-import { derivePositionSummary } from "@/lib/position-summary";
+import { MatchesExplorer } from "@/components/match/matches-explorer";
 import { PendingBonus } from "@/components/bonus/pending-bonus";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { PoolSelector } from "@/components/pool/pool-selector";
-import { QuickLinks } from "@/components/home/quick-links";
-import { PositionCard } from "@/components/home/position-card";
-import { NextMatches } from "@/components/home/next-matches";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage({
+export default async function JogosPage({
   searchParams,
 }: {
   searchParams: Promise<{ pool?: string }>;
@@ -52,41 +47,40 @@ export default async function HomePage({
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
 
-  const [bonusStatus, teams, rankingRows, upcoming, allMatches] = await Promise.all([
+  const [bonusStatus, teams, matches] = await Promise.all([
     getBonusStatus({ userId, poolId: selected.id }),
     getTournamentTeams(),
-    getRanking(selected.id),
-    getUpcomingMatchesWithBets({ userId, poolId: selected.id, take: 4 }),
     getAllMatchesWithBets({ userId, poolId: selected.id }),
   ]);
 
-  const summary = derivePositionSummary(rankingRows, userId);
-  const totalMatches = allMatches.length;
-  const betCount = allMatches.filter((m) => m.bet).length;
+  // Resumo de palpites dos jogos: já palpitados / total disponível.
+  const totalMatches = matches.length;
+  const betCount = matches.filter((m) => m.bet).length;
 
   return (
     <div className="space-y-6">
-      {/* Atualiza placares/ranking ao vivo sem reload manual */}
+      {/* Atualiza placares ao vivo sem reload manual */}
       <AutoRefresh />
 
-      {/* Cabeçalho do bolão */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">{selected.name}</h1>
-          <p className="text-sm text-muted-foreground">Seu painel do bolão</p>
+          <h1 className="text-xl font-bold">Jogos da Copa</h1>
+          <Link
+            href={`/b/${selected.slug}`}
+            className="text-sm text-primary hover:underline"
+          >
+            Ver ranking · {selected.name} →
+          </Link>
         </div>
         <PoolSelector pools={pools} current={selected.slug} />
       </div>
 
       <PendingBonus poolId={selected.id} status={bonusStatus} teams={teams} />
 
-      <PositionCard summary={summary} currentUserId={userId} poolSlug={selected.slug} />
-
-      <QuickLinks />
-
-      {/* Progresso de palpites dos jogos — leva à tela de Jogos */}
+      {/* Progresso de palpites dos jogos — leva ao extrato */}
       <Link
-        href={`/jogos?pool=${selected.slug}`}
+        href={`/extrato?pool=${selected.slug}`}
         className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-colors hover:border-primary/60"
       >
         <div className="flex items-center gap-2">
@@ -99,13 +93,22 @@ export default async function HomePage({
             <span className="text-muted-foreground">/{totalMatches}</span>
           </span>
           <span className="flex items-center gap-1 text-primary">
-            Palpitar
+            <Receipt className="h-4 w-4" />
+            Ver extrato
             <ChevronRight className="h-4 w-4" />
           </span>
         </span>
       </Link>
 
-      <NextMatches matches={upcoming} poolSlug={selected.slug} />
+      {totalMatches === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Nenhum jogo disponível. Aguarde a importação do calendário da Copa 2026.
+          </CardContent>
+        </Card>
+      ) : (
+        <MatchesExplorer matches={matches} poolId={selected.id} />
+      )}
     </div>
   );
 }

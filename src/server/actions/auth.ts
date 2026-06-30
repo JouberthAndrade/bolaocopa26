@@ -1,8 +1,14 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { signOut } from "@/auth";
 import { db } from "@/lib/db";
 import { registerSchema } from "@/lib/validations";
+
+/** Encerra a sessão e volta para o login. Usado pelo UserMenu (client). */
+export async function signOutAction() {
+  await signOut({ redirectTo: "/login" });
+}
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
