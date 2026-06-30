@@ -3,7 +3,24 @@
 // para exibir o badge correto abaixo do palpite. A pontuação em si continua
 // vindo de Bet.pointsEarned (calculado no servidor com a ScoringRule do bolão).
 
+import type { MatchStatus } from "@prisma/client";
+
 export type BetResultKind = "PENDING" | "EXACT" | "RESULT" | "MISS";
+
+/**
+ * Jogo encerrado, mas com a pontuação ainda NÃO consolidada: o placar precisa
+ * passar pelo double-check de confirmação (visto igual em dois ticks do sync) e
+ * pelo cron de scoring antes de `pointsEarned` ser gravado. Nessa janela
+ * (~30–45 min) `pointsEarned` ainda é 0 — exibir "aguardando confirmação do
+ * resultado" em vez de "+0 pts" evita passar a impressão de que quem cravou não
+ * pontuou. Ver scoring.ts / result-confirmation.ts.
+ */
+export function isAwaitingConfirmation(match: {
+  status: MatchStatus;
+  scored: boolean;
+}): boolean {
+  return match.status === "FINISHED" && !match.scored;
+}
 
 export interface BetResult {
   kind: BetResultKind;

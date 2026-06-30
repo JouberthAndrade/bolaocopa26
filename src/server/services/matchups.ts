@@ -20,6 +20,8 @@ export interface ConfrontoMatch {
   /** null enquanto o jogo não tiver placar (revelado antes de começar) */
   homeScore: number | null;
   awayScore: number | null;
+  /** true quando a pontuação já foi consolidada (pointsEarned final). */
+  scored: boolean;
   home: { name: string; countryCode: string };
   away: { name: string; countryCode: string };
   betsCount: number;
@@ -53,6 +55,7 @@ export async function getRevealedMatchups(poolId: string): Promise<ConfrontoMatc
       lockAt: true,
       homeScore: true,
       awayScore: true,
+      scored: true,
       homeTeam: { select: { name: true, countryCode: true } },
       awayTeam: { select: { name: true, countryCode: true } },
       _count: { select: { bets: { where: { poolId } } } },
@@ -69,6 +72,7 @@ export async function getRevealedMatchups(poolId: string): Promise<ConfrontoMatc
       kickoffAt: m.kickoffAt,
       homeScore: m.homeScore,
       awayScore: m.awayScore,
+      scored: m.scored,
       home: m.homeTeam,
       away: m.awayTeam,
       betsCount: m._count.bets,
@@ -81,6 +85,8 @@ export interface MatchupDetail {
     status: MatchStatus;
     homeScore: number | null;
     awayScore: number | null;
+    /** true quando a pontuação já foi consolidada (pointsEarned final). */
+    scored: boolean;
     home: { name: string; countryCode: string };
     away: { name: string; countryCode: string };
   };
@@ -107,6 +113,7 @@ export async function getMatchupDetail(
       lockAt: true,
       homeScore: true,
       awayScore: true,
+      scored: true,
       homeTeam: { select: { name: true, countryCode: true } },
       awayTeam: { select: { name: true, countryCode: true } },
     },
@@ -163,6 +170,7 @@ export async function getMatchupDetail(
       status: match.status,
       homeScore: match.homeScore,
       awayScore: match.awayScore,
+      scored: match.scored,
       home: match.homeTeam,
       away: match.awayTeam,
     },
