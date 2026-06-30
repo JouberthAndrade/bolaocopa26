@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { KNOCKOUT_UNLOCK_DATE } from "@/lib/constants";
+import { saoPauloDayRange } from "@/lib/today";
 import { computeGroupStandings } from "@/lib/group";
 import { BRACKET_BY_STAGE, resolveSlot } from "@/lib/bracket";
 import type { Advance, MatchStage, MatchStatus } from "@prisma/client";
@@ -150,16 +151,19 @@ export async function getAllMatchesWithBets(opts: {
   })) satisfies MatchWithBet[];
 }
 
-/** Próximos N jogos (quando não há jogos hoje). */
-export async function getUpcomingMatchesWithBets(opts: {
+/**
+ * Jogos do dia atual (fuso America/Sao_Paulo) com o palpite do usuário no bolão.
+ * Inclui jogos em qualquer status (agendado, ao vivo, encerrado) cujo kickoff cai
+ * no dia de hoje. Ordenado por horário.
+ */
+export async function getTodayMatchesWithBets(opts: {
   userId: string;
   poolId: string;
-  take?: number;
 }) {
+  const { start, end } = saoPauloDayRange();
   const matches = await db.match.findMany({
-    where: { kickoffAt: { gte: new Date() } },
+    where: { kickoffAt: { gte: start, lte: end } },
     orderBy: { kickoffAt: "asc" },
-    take: opts.take ?? 8,
     include: {
       homeTeam: { select: { name: true, countryCode: true, crestUrl: true } },
       awayTeam: { select: { name: true, countryCode: true, crestUrl: true } },

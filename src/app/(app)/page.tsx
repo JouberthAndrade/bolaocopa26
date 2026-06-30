@@ -5,7 +5,7 @@ import {
   getUserPools,
   getAllMatchesWithBets,
   getTournamentTeams,
-  getUpcomingMatchesWithBets,
+  getTodayMatchesWithBets,
 } from "@/server/services/matches";
 import { getRanking } from "@/server/services/ranking";
 import { getBonusStatus } from "@/server/services/bonus";
@@ -15,7 +15,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { PoolSelector } from "@/components/pool/pool-selector";
 import { QuickLinks } from "@/components/home/quick-links";
 import { PositionCard } from "@/components/home/position-card";
-import { NextMatches } from "@/components/home/next-matches";
+import { TodayMatches } from "@/components/home/today-matches";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -52,11 +52,11 @@ export default async function HomePage({
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
 
-  const [bonusStatus, teams, rankingRows, upcoming, allMatches] = await Promise.all([
+  const [bonusStatus, teams, rankingRows, todayMatches, allMatches] = await Promise.all([
     getBonusStatus({ userId, poolId: selected.id }),
     getTournamentTeams(),
     getRanking(selected.id),
-    getUpcomingMatchesWithBets({ userId, poolId: selected.id, take: 4 }),
+    getTodayMatchesWithBets({ userId, poolId: selected.id }),
     getAllMatchesWithBets({ userId, poolId: selected.id }),
   ]);
 
@@ -105,7 +105,7 @@ export default async function HomePage({
         </span>
       </Link>
 
-      <NextMatches matches={upcoming} poolSlug={selected.slug} />
+      <TodayMatches matches={todayMatches} poolSlug={selected.slug} />
     </div>
   );
 }
