@@ -21,6 +21,13 @@ import type { RaceData, RaceParticipant } from "@/server/services/race";
 
 const AVATAR_PX = 36;
 
+// Como o modo de agrupamento divide a corrida — usado na dica e nos títulos.
+const MODE_HINT: Record<RaceMode, string> = {
+  round: "rodada",
+  day: "dia",
+  game: "jogo a jogo",
+};
+
 export function RaceTrack({
   data,
   currentUserId,
@@ -191,6 +198,12 @@ export function RaceTrack({
         }}
         onPlayToggle={() => (playing ? setPlaying(false) : play())}
       />
+
+      <p className="text-center text-[11px] leading-snug text-muted-foreground">
+        Toque <span className="font-semibold text-foreground">Assistir</span> para
+        ver a corrida evoluir — ou arraste a linha para avançar por{" "}
+        {MODE_HINT[mode]}.
+      </p>
     </div>
   );
 }
@@ -344,22 +357,28 @@ function ModeToggle({
   onChange: (m: RaceMode) => void;
 }) {
   const items = [
-    { key: "round" as const, label: "Rodada", Icon: ListOrdered },
-    { key: "day" as const, label: "Dia", Icon: CalendarRange },
-    { key: "game" as const, label: "Jogo", Icon: Swords },
+    { key: "round" as const, label: "Rodada", Icon: ListOrdered, title: "Agrupar a corrida por rodada" },
+    { key: "day" as const, label: "Dia", Icon: CalendarRange, title: "Agrupar a corrida por dia" },
+    { key: "game" as const, label: "Jogo", Icon: Swords, title: "Avançar a corrida jogo a jogo" },
   ];
   return (
-    <div className="flex shrink-0 gap-1 rounded-full border border-border bg-background p-0.5">
-      {items.map(({ key, label, Icon }) => {
+    <div
+      role="group"
+      aria-label="Agrupar a corrida por"
+      className="flex shrink-0 gap-1 rounded-full border border-border bg-background p-0.5"
+    >
+      {items.map(({ key, label, Icon, title }) => {
         const active = mode === key;
         return (
           <button
             key={key}
             type="button"
             aria-pressed={active}
+            title={title}
             onClick={() => onChange(key)}
             className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors",
+              "flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               active
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -389,8 +408,14 @@ function Controls({
 }) {
   const atStart = step <= 0;
   const atEnd = step >= checkpoints.length - 1;
+  // Alvos de toque ≥44px (min-h/w-11) para o polegar no celular.
   const arrow =
-    "rounded-full border border-border bg-background p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
+    "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-40";
+
+  // Thumb do slider grande o bastante para arrastar no toque.
+  const rangeThumb =
+    "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow " +
+    "[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background [&::-moz-range-thumb]:bg-primary";
 
   return (
     <div className="flex items-center gap-2">
@@ -398,15 +423,15 @@ function Controls({
         type="button"
         onClick={onPlayToggle}
         aria-label={playing ? "Pausar" : "Assistir corrida"}
-        className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
       >
-        {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+        {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         {playing ? "Pausar" : "Assistir"}
       </button>
 
       <button
         type="button"
-        aria-label="Anterior"
+        aria-label="Checkpoint anterior"
         disabled={atStart}
         onClick={() => onStep(step - 1)}
         className={arrow}
@@ -422,12 +447,15 @@ function Controls({
         value={step}
         onChange={(e) => onStep(Number(e.target.value))}
         aria-label="Checkpoint da corrida"
-        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
+        className={cn(
+          "h-2 flex-1 cursor-pointer appearance-none rounded-full bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          rangeThumb,
+        )}
       />
 
       <button
         type="button"
-        aria-label="Próximo"
+        aria-label="Próximo checkpoint"
         disabled={atEnd}
         onClick={() => onStep(step + 1)}
         className={arrow}

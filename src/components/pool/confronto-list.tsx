@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Target, Trophy, X, Users, ChevronRight, Bot, Wifi, Clock } from "lucide-react";
+import { Target, Trophy, X, Users, ChevronRight, Bot, Wifi, Clock, RotateCw } from "lucide-react";
 import { Flag } from "@/components/flag";
 import { Dialog } from "@/components/ui/dialog";
 import { STAGE_LABEL } from "@/lib/labels";
@@ -112,7 +112,19 @@ export function ConfrontoList({
           <p className="py-6 text-center text-sm text-muted-foreground">Carregando palpites…</p>
         )}
         {error && !pending && (
-          <p className="py-6 text-center text-sm text-destructive">{error}</p>
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            {open && (
+              <button
+                type="button"
+                onClick={() => openMatch(open)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <RotateCw className="h-4 w-4" aria-hidden />
+                Tentar novamente
+              </button>
+            )}
+          </div>
         )}
         {detail && !pending && (
           <MatchupRows

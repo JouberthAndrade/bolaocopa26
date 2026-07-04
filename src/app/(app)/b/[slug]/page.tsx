@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PencilLine } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { requireUserId } from "@/server/guards";
 import { db } from "@/lib/db";
@@ -14,19 +15,13 @@ import { RaceTrack } from "@/components/pool/race-track";
 import { ConfrontoList } from "@/components/pool/confronto-list";
 import { TopScorers } from "@/components/pool/top-scorers";
 import { InviteCard } from "@/components/pool/invite-card";
+import { PoolTabs, type PoolTab } from "@/components/pool/pool-tabs";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "ranking" | "confronto" | "artilharia" | "regras";
-
-const TABS: { key: Tab; label: string }[] = [
-  { key: "ranking", label: "Ranking" },
-  { key: "confronto", label: "Confronto" },
-  { key: "artilharia", label: "Artilharia" },
-  { key: "regras", label: "Regras" },
-];
+type Tab = PoolTab;
 
 export default async function PoolPage({
   params,
@@ -54,36 +49,29 @@ export default async function PoolPage({
     <div className="space-y-4">
       <AutoRefresh />
 
-      <header className="space-y-1">
-        <h1 className="text-xl font-bold">{pool.name}</h1>
-        {pool.description && (
-          <p className="text-sm text-muted-foreground">{pool.description}</p>
-        )}
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <span>{pool._count.memberships} participantes</span>
-          {Number(pool.stakeAmount) > 0 && (
-            <span>Aposta: {formatCurrency(Number(pool.stakeAmount), pool.currency)}</span>
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-xl font-bold">{pool.name}</h1>
+          {pool.description && (
+            <p className="text-sm text-muted-foreground">{pool.description}</p>
           )}
-          <Link href={`/?pool=${pool.slug}`} className="text-primary hover:underline">
-            Palpitar →
-          </Link>
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span>{pool._count.memberships} participantes</span>
+            {Number(pool.stakeAmount) > 0 && (
+              <span>Aposta: {formatCurrency(Number(pool.stakeAmount), pool.currency)}</span>
+            )}
+          </div>
         </div>
+        <Link
+          href={`/?pool=${pool.slug}`}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <PencilLine className="h-4 w-4" aria-hidden />
+          Palpitar
+        </Link>
       </header>
 
-      <nav className="flex gap-1 rounded-lg border border-border bg-card p-1">
-        {TABS.map((t) => (
-          <Link
-            key={t.key}
-            href={`/b/${slug}?tab=${t.key}`}
-            className={cn(
-              "flex-1 rounded-md py-2 text-center text-sm font-medium transition-colors",
-              tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <PoolTabs slug={slug} active={tab} />
 
       {tab === "ranking" && <RankingSection poolId={pool.id} userId={userId} />}
       {tab === "confronto" && <ConfrontoSection poolId={pool.id} />}
