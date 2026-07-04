@@ -4,10 +4,11 @@ import Link, { useLinkStatus } from "next/link";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type PoolTab = "ranking" | "confronto" | "artilharia" | "regras";
+export type PoolTab = "ranking" | "corrida" | "confronto" | "artilharia" | "regras";
 
 const TABS: { key: PoolTab; label: string }[] = [
   { key: "ranking", label: "Ranking" },
+  { key: "corrida", label: "Corrida" },
   { key: "confronto", label: "Confronto" },
   { key: "artilharia", label: "Artilharia" },
   { key: "regras", label: "Regras" },
@@ -21,7 +22,7 @@ const TABS: { key: PoolTab; label: string }[] = [
  */
 export function PoolTabs({ slug, active }: { slug: string; active: PoolTab }) {
   return (
-    <nav className="flex gap-1 rounded-lg border border-border bg-card p-1">
+    <nav className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {TABS.map((t) => {
         const isActive = active === t.key;
         return (
@@ -31,7 +32,9 @@ export function PoolTabs({ slug, active }: { slug: string; active: PoolTab }) {
             scroll={false}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex-1 rounded-md py-2 text-center text-sm font-medium transition-colors",
+              // flex-1 preenche igualmente quando cabe; min-w-fit impede o texto de
+              // ser cortado — se não couber (5 abas em telas pequenas), a barra rola.
+              "min-w-fit flex-1 whitespace-nowrap rounded-md px-2.5 py-2 text-center text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-card",
               isActive
                 ? "bg-primary text-primary-foreground"
