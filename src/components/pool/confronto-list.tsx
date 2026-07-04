@@ -7,6 +7,7 @@ import { Flag } from "@/components/flag";
 import { Dialog } from "@/components/ui/dialog";
 import { STAGE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { isAwaitingConfirmation } from "@/lib/bet-result";
 import { loadMatchupDetail } from "@/server/actions/matchups";
 import { splitBotRows, withProvisionalPoints } from "@/lib/matchup";
 import type { ConfrontoMatch, MatchupDetail } from "@/server/services/matchups";
@@ -129,10 +130,11 @@ export function ConfrontoList({
           <MatchupRows
             match={detail.match}
             rows={
-              // Jogo em andamento: pontua provisoriamente no client (Bet.pointsEarned
-              // só é persistido pelo servidor após o jogo encerrar). Encerrado: usa
-              // os pontos já persistidos.
-              detail.match.status === "FINISHED"
+              // Pontua provisoriamente no client (Bet.pointsEarned só é persistido
+              // pelo servidor após confirmar o resultado) enquanto o jogo está em
+              // andamento OU encerrado mas ainda não pontuado. Só usa os pontos
+              // persistidos quando o scoring já consolidou (scored).
+              detail.match.status === "FINISHED" && detail.match.scored
                 ? detail.rows
                 : withProvisionalPoints(detail.rows, detail.rule)
             }
@@ -164,9 +166,20 @@ function MatchupRows({ match, rows }: { match: MatchTeams; rows: MatchupRow[] })
     return <p className="text-sm text-muted-foreground">Sem participantes.</p>;
   }
   const { bots, humans } = splitBotRows(rows);
+  const awaiting = isAwaitingConfirmation(match);
 
   return (
     <div className="space-y-4">
+      {awaiting && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-pulse" />
+          <span>
+            Aguardando confirmação do resultado — os pontos abaixo são provisórios
+            e serão consolidados assim que o placar for confirmado.
+          </span>
+        </div>
+      )}
+
       {bots.length > 0 && (
         <section className="space-y-2">
           <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

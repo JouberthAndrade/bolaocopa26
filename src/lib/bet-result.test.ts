@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyBet } from "./bet-result";
+import { classifyBet, isAwaitingConfirmation } from "./bet-result";
 
 const finished = (home: number, away: number) => ({ home, away, finished: true });
 
@@ -51,5 +51,20 @@ describe("classifyBet", () => {
 
   it("sem palpite → PENDING", () => {
     expect(classifyBet(null, finished(2, 1)).kind).toBe("PENDING");
+  });
+});
+
+describe("isAwaitingConfirmation", () => {
+  it("finalizado e ainda não pontuado → true", () => {
+    expect(isAwaitingConfirmation({ status: "FINISHED", scored: false })).toBe(true);
+  });
+
+  it("finalizado e já pontuado → false", () => {
+    expect(isAwaitingConfirmation({ status: "FINISHED", scored: true })).toBe(false);
+  });
+
+  it("não finalizado → false (mesmo sem pontuar)", () => {
+    expect(isAwaitingConfirmation({ status: "LIVE", scored: false })).toBe(false);
+    expect(isAwaitingConfirmation({ status: "SCHEDULED", scored: false })).toBe(false);
   });
 });

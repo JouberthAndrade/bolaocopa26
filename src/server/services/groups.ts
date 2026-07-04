@@ -57,6 +57,7 @@ export async function getGroupsWithMatches(opts: { userId: string; poolId: strin
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     penaltyWinner: m.penaltyWinner,
+    scored: m.scored,
     home: m.homeTeam,
     away: m.awayTeam,
     bet: m.bets[0] ?? null,
