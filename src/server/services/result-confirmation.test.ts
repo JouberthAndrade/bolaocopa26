@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { decideResultWrite, type StoredResult } from "./result-confirmation";
+import {
+  decidePenaltyWinnerWrite,
+  decideResultWrite,
+  type StoredResult,
+} from "./result-confirmation";
 
 const stored = (over: Partial<StoredResult> = {}): StoredResult => ({
   status: "SCHEDULED",
@@ -88,5 +92,29 @@ describe("decideResultWrite — double check de resultado", () => {
     );
     expect(d).toMatchObject({ locked: false, resultConfirmed: true });
     expect(d).not.toHaveProperty("scored");
+  });
+});
+
+describe("decidePenaltyWinnerWrite — backfill do vencedor dos pênaltis", () => {
+  it("jogo sem penaltyWinner + provider informa → backfill re-armando scoring (já pontuado)", () => {
+    const d = decidePenaltyWinnerWrite({ penaltyWinner: null, scored: true }, "HOME");
+    expect(d).toEqual({ penaltyWinner: "HOME", scored: false });
+  });
+
+  it("jogo sem penaltyWinner + provider informa, ainda não pontuado → backfill sem mexer em scored", () => {
+    const d = decidePenaltyWinnerWrite({ penaltyWinner: null, scored: false }, "AWAY");
+    expect(d).toEqual({ penaltyWinner: "AWAY" });
+  });
+
+  it("penaltyWinner já preenchido (manual ou sync anterior) → não sobrescreve", () => {
+    expect(decidePenaltyWinnerWrite({ penaltyWinner: "AWAY", scored: true }, "HOME")).toBeNull();
+  });
+
+  it("provider não informa vencedor (tempo normal/prorrogação) → nada a fazer", () => {
+    expect(decidePenaltyWinnerWrite({ penaltyWinner: null, scored: true }, null)).toBeNull();
+  });
+
+  it("jogo inexistente no banco → nada a fazer (create já grava o campo)", () => {
+    expect(decidePenaltyWinnerWrite(null, "HOME")).toBeNull();
   });
 });

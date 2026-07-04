@@ -1,4 +1,4 @@
-import type { MatchStatus } from "@prisma/client";
+import type { Advance, MatchStatus } from "@prisma/client";
 
 /** Estado atual do jogo no banco (campos relevantes ao resultado). */
 export interface StoredResult {
@@ -83,4 +83,22 @@ export function decideResultWrite(
     resultConfirmed: confirmed,
     ...(rearmScoring ? { scored: false } : {}),
   };
+}
+
+/**
+ * Backfill do vencedor dos pênaltis: mesmo com o resultado travado (locked),
+ * um jogo que ficou sem `penaltyWinner` (ex.: correção manual de placar que
+ * não informou o campo) pode recebê-lo do provedor. Só preenche quando o banco
+ * está null — nunca sobrescreve valor existente (manual é autoritativo). Se o
+ * jogo já foi pontuado, re-arma o scoring para aplicar o bônus de mata-mata.
+ */
+export function decidePenaltyWinnerWrite(
+  existing: { penaltyWinner: Advance | null; scored: boolean } | null,
+  providerPenaltyWinner: Advance | null,
+): { penaltyWinner: Advance; scored?: false } | null {
+  if (!existing) return null;
+  if (existing.penaltyWinner != null || providerPenaltyWinner == null) return null;
+  return existing.scored
+    ? { penaltyWinner: providerPenaltyWinner, scored: false }
+    : { penaltyWinner: providerPenaltyWinner };
 }

@@ -2,7 +2,10 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { countryNamePtBR } from "@/lib/country-codes";
 import { getFootballProvider } from "@/server/providers/football/football-data";
-import { decideResultWrite } from "@/server/services/result-confirmation";
+import {
+  decidePenaltyWinnerWrite,
+  decideResultWrite,
+} from "@/server/services/result-confirmation";
 
 const LOCK_MINUTES_BEFORE = 20;
 const TOURNAMENT_NAME = "Copa do Mundo FIFA 2026";
@@ -96,6 +99,7 @@ export async function syncFromProvider() {
         awayScore: true,
         resultConfirmed: true,
         scored: true,
+        penaltyWinner: true,
       },
     });
 
@@ -122,16 +126,26 @@ export async function syncFromProvider() {
       lockAt,
     };
 
+    // Backfill do vencedor dos pênaltis: preenche penaltyWinner faltante (ex.:
+    // apagado por correção manual) mesmo em jogo travado, re-armando o scoring
+    // quando já pontuado — assim o bônus de mata-mata é aplicado retroativamente.
+    const penaltyWrite = decidePenaltyWinnerWrite(existing, m.penaltyWinner);
+
     // Campos de resultado a escrever quando o jogo ainda NÃO está confirmado.
+    // Confirmado (locked): no máximo o backfill de penaltyWinner acima.
     const result = decision.locked
-      ? null
+      ? penaltyWrite
       : {
           homeScore: decision.homeScore,
           awayScore: decision.awayScore,
           status: decision.status,
           resultConfirmed: decision.resultConfirmed,
           penaltyWinner: m.penaltyWinner,
-          ...(decision.scored !== undefined ? { scored: decision.scored } : {}),
+          ...(decision.scored !== undefined
+            ? { scored: decision.scored }
+            : penaltyWrite?.scored !== undefined
+              ? { scored: penaltyWrite.scored }
+              : {}),
         };
 
     await db.match.upsert({

@@ -20,6 +20,24 @@ export const manualResultSchema = z
 
 export type ManualResultInput = z.infer<typeof manualResultSchema>;
 
+/**
+ * Payload de escrita do resultado manual (Match.update). Lançamento manual é
+ * autoritativo: marca FINISHED, pula o double-check (resultConfirmed=true) e
+ * força a (re)pontuação (scored=false). `penaltyWinner` só entra quando
+ * informado — omitido, PRESERVA o valor já capturado pelo sync (apagá-lo
+ * cancelaria o bônus de quem acertou quem avança nos pênaltis).
+ */
+export function manualResultUpdateData(r: ManualResultInput) {
+  return {
+    homeScore: r.homeScore,
+    awayScore: r.awayScore,
+    status: "FINISHED" as const,
+    scored: false,
+    resultConfirmed: true,
+    ...(r.penaltyWinner ? { penaltyWinner: r.penaltyWinner } : {}),
+  };
+}
+
 /** Corpo aceito: um objeto solto OU { results: [...] }. Normaliza para array. */
 export const manualResultsBodySchema = z.union([
   z.object({ results: z.array(manualResultSchema).min(1) }).transform((b) => b.results),

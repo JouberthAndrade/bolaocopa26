@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { manualResultsBodySchema, manualResultSchema } from "./manual-result";
+import {
+  manualResultsBodySchema,
+  manualResultSchema,
+  manualResultUpdateData,
+} from "./manual-result";
 
 describe("manualResultSchema", () => {
   it("aceita identificação por externalId", () => {
@@ -40,6 +44,26 @@ describe("manualResultSchema", () => {
       penaltyWinner: "DRAW",
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe("manualResultUpdateData — payload de escrita do resultado manual", () => {
+  it("com penaltyWinner → grava o vencedor dos pênaltis", () => {
+    const d = manualResultUpdateData({ externalId: "1", homeScore: 1, awayScore: 1, penaltyWinner: "AWAY" });
+    expect(d).toEqual({
+      homeScore: 1,
+      awayScore: 1,
+      status: "FINISHED",
+      scored: false,
+      resultConfirmed: true,
+      penaltyWinner: "AWAY",
+    });
+  });
+
+  it("sem penaltyWinner → NÃO toca no campo (preserva o capturado pelo sync)", () => {
+    const d = manualResultUpdateData({ externalId: "1", homeScore: 1, awayScore: 1 });
+    expect(d).not.toHaveProperty("penaltyWinner");
+    expect(d).toMatchObject({ homeScore: 1, awayScore: 1, scored: false, resultConfirmed: true });
   });
 });
 
