@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { scoreFinishedMatches } from "@/server/services/scoring";
-import type { ManualResultInput } from "@/lib/manual-result";
+import { manualResultUpdateData, type ManualResultInput } from "@/lib/manual-result";
 
 export interface AppliedResult {
   matchId: string;
@@ -59,17 +59,7 @@ export async function applyManualResults(
 
     await db.match.update({
       where: { id: match.id },
-      data: {
-        homeScore: r.homeScore,
-        awayScore: r.awayScore,
-        status: "FINISHED",
-        scored: false, // força o scoring a (re)pontuar este jogo
-        // Lançamento manual é autoritativo: pula o double-check do sync e pontua
-        // já no próximo passo. Também trava o resultado contra sobrescrita pelo
-        // provedor (sync respeita resultConfirmed = true).
-        resultConfirmed: true,
-        penaltyWinner: r.penaltyWinner ?? null,
-      },
+      data: manualResultUpdateData(r),
     });
     applied.push({
       matchId: match.id,
