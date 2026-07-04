@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { Goal } from "lucide-react";
+import { Goal, RotateCw } from "lucide-react";
 import { Flag } from "@/components/flag";
 import { teamCode } from "@/lib/team-name";
 import { countryNamePtBR } from "@/lib/country-codes";
@@ -24,8 +24,10 @@ export function TopScorers() {
   const [payload, setPayload] = useState<TopScorersPayload | null>(null);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let active = true;
+    setError(false);
+    setPayload(null);
     fetch("/api/top-scorers", { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error("fetch failed");
@@ -41,6 +43,8 @@ export function TopScorers() {
       active = false;
     };
   }, []);
+
+  useEffect(() => load(), [load]);
 
   return (
     <div className="space-y-4">
@@ -62,9 +66,19 @@ export function TopScorers() {
       </header>
 
       {error ? (
-        <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-destructive">
-          Não foi possível carregar a artilharia. Tente novamente mais tarde.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center">
+          <p className="text-sm text-destructive">
+            Não foi possível carregar a artilharia.
+          </p>
+          <button
+            type="button"
+            onClick={load}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <RotateCw className="h-4 w-4" aria-hidden />
+            Tentar novamente
+          </button>
+        </div>
       ) : payload === null ? (
         <ScorersSkeleton />
       ) : payload.data.length === 0 ? (

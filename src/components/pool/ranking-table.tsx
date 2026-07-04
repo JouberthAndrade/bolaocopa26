@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { Wifi } from "lucide-react";
+import { Wifi, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Flag } from "@/components/flag";
@@ -75,12 +75,12 @@ export function RankingTable({
           const hasMedal = r.position <= 3;
 
           return (
-            <motion.div
+            <motion.button
               key={r.userId}
+              type="button"
               layout={reduce ? false : "position"}
               transition={{ type: "spring", stiffness: 500, damping: 42 }}
-              role="button"
-              tabIndex={0}
+              aria-label={`Ver palpites de ${r.name ?? "Anônimo"}`}
               onClick={() =>
                 handleRowClick({
                   userId: r.userId,
@@ -88,18 +88,9 @@ export function RankingTable({
                   image: r.image,
                 })
               }
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleRowClick({
-                    userId: r.userId,
-                    name: r.name ?? "Anônimo",
-                    image: r.image,
-                  });
-                }
-              }}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-secondary/40",
+                "flex w-full cursor-pointer items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-secondary/40",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 r.isLive
                   ? "border-primary/50 bg-primary/5 ring-1 ring-primary/30"
                   : isMe
@@ -136,11 +127,11 @@ export function RankingTable({
 
               {/* Nome */}
               <div className="min-w-0 flex-1">
-                <p className={cn("truncate font-semibold", isMe && "text-primary")}>
+                <span className={cn("block truncate font-semibold", isMe && "text-primary")}>
                   {r.name ?? "Anônimo"}
                   {isMe && <span className="ml-1 text-xs font-normal">(você)</span>}
-                </p>
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <span>
                     {r.hits} acerto{r.hits !== 1 ? "s" : ""} · {r.misses} erro
                     {r.misses !== 1 ? "s" : ""}
@@ -151,22 +142,22 @@ export function RankingTable({
                       +{r.livePoints} ao vivo
                     </span>
                   )}
-                </p>
+                </span>
               </div>
 
               {/* Pontuação */}
               <div className="text-right">
-                <p
+                <span
                   className={cn(
-                    "text-lg font-bold tabular-nums",
+                    "block text-lg font-bold tabular-nums",
                     r.isLive ? "text-primary" : hasMedal && "text-accent",
                   )}
                 >
                   {r.totalPoints}
-                </p>
-                <p className="text-xs text-muted-foreground">pts</p>
+                </span>
+                <span className="block text-xs text-muted-foreground">pts</span>
               </div>
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>
@@ -204,7 +195,19 @@ export function RankingTable({
         )}
 
         {error && (
-          <p className="text-center text-sm text-destructive">{error}</p>
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            {selectedUser && (
+              <button
+                type="button"
+                onClick={() => handleRowClick(selectedUser)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <RotateCw className="h-4 w-4" aria-hidden />
+                Tentar novamente
+              </button>
+            )}
+          </div>
         )}
 
         {!loading && !error && bets?.length === 0 && (

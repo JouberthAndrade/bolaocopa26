@@ -21,7 +21,8 @@ export const viewport: Viewport = {
   themeColor: "#0b1220",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // Sem maximumScale/userScalable: bloquear zoom é falha WCAG 1.4.4. O zoom
+  // acidental em inputs no iOS é resolvido com fonte ≥16px nos campos.
 };
 
 export default function RootLayout({
