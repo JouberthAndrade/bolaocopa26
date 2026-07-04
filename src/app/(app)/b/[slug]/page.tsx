@@ -74,6 +74,7 @@ export default async function PoolPage({
       <PoolTabs slug={slug} active={tab} />
 
       {tab === "ranking" && <RankingSection poolId={pool.id} userId={userId} />}
+      {tab === "corrida" && <CorridaSection poolId={pool.id} userId={userId} />}
       {tab === "confronto" && <ConfrontoSection poolId={pool.id} />}
       {tab === "artilharia" && <TopScorers />}
       {tab === "regras" && (
@@ -92,12 +93,17 @@ export default async function PoolPage({
 }
 
 async function RankingSection({ poolId, userId }: { poolId: string; userId: string }) {
-  const [rows, race] = await Promise.all([getRanking(poolId), getRaceData(poolId)]);
+  const rows = await getRanking(poolId);
+  return <RankingTable rows={rows} currentUserId={userId} poolId={poolId} />;
+}
+
+async function CorridaSection({ poolId, userId }: { poolId: string; userId: string }) {
+  const race = await getRaceData(poolId);
+  // Largura contida e centralizada: a pista foi desenhada para ~600px; em coluna
+  // única de largura total no desktop ela ficaria esparsa. Centralizar dá um palco
+  // focado pra corrida sem quebrar o mobile (onde max-w não limita).
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] lg:items-start">
-      {/* Esquerda: ranking (inalterado) */}
-      <RankingTable rows={rows} currentUserId={userId} poolId={poolId} />
-      {/* Direita: corrida pelo prêmio */}
+    <div className="mx-auto w-full max-w-2xl">
       <RaceTrack data={race} currentUserId={userId} />
     </div>
   );
