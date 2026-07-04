@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { Wifi, RotateCw } from "lucide-react";
+import { Wifi, RotateCw, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Flag } from "@/components/flag";
