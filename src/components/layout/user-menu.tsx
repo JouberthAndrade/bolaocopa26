@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ListChecks, CalendarDays, Trophy, User, LogOut } from "lucide-react";
+import { ListChecks, CalendarDays, Trophy, Receipt, User, LogOut } from "lucide-react";
 import { signOutAction } from "@/server/actions/auth";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +16,13 @@ const LINKS = [
   { href: "/jogos", label: "Jogos", icon: ListChecks },
   { href: "/calendar", label: "Agenda", icon: CalendarDays },
   { href: "/pools", label: "Bolões", icon: Trophy },
+  { href: "/extrato", label: "Extrato", icon: Receipt },
   { href: "/profile", label: "Perfil", icon: User },
 ];
 
 /**
  * Avatar do usuário como botão que abre um menu com os itens secundários
- * (Jogos, Agenda, Bolões, Perfil) + Sair. Fecha ao clicar fora ou com Esc.
+ * (Jogos, Agenda, Bolões, Extrato, Perfil) + Sair. Fecha ao clicar fora ou com Esc.
  * Sem dependência externa de dropdown (projeto não usa Radix).
  */
 export function UserMenu({ name, image }: UserMenuProps) {
