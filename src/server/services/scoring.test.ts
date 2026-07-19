@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeBetPoints, resolveFinalWinner, normalizePlayerName } from "./scoring";
+import {
+  computeBetPoints,
+  resolveFinalWinner,
+  normalizePlayerName,
+  matchesTopScorerGuess,
+} from "./scoring";
 
 // Regra padrão do bolão (ScoringRule): resultado=2 (vitória ou empate),
 // bônus placar exato=+1 → placar exato vale 3.
@@ -188,5 +193,38 @@ describe("normalizePlayerName — comparação do palpite de artilheiro", () => 
 
   it("nomes diferentes não colidem", () => {
     expect(normalizePlayerName("Mbappé")).not.toBe(normalizePlayerName("Messi"));
+  });
+});
+
+describe("matchesTopScorerGuess — tolera sobrenome e erro de digitação", () => {
+  const actual = "Kylian Mbappé";
+
+  it("nome completo, igual ao real → acerto", () => {
+    expect(matchesTopScorerGuess("Kylian Mbappé", actual)).toBe(true);
+  });
+
+  it("só o sobrenome, sem acento → acerto", () => {
+    expect(matchesTopScorerGuess("Mbappe", actual)).toBe(true);
+  });
+
+  it("só o sobrenome, com acento e caixa alta → acerto", () => {
+    expect(matchesTopScorerGuess("MBAPPÉ", actual)).toBe(true);
+  });
+
+  it('erro de digitação ("Mbapee") → acerto (regressão do palpite do Matheus)', () => {
+    expect(matchesTopScorerGuess("Mbapee", actual)).toBe(true);
+  });
+
+  it("jogador diferente não colide (Harry Kane)", () => {
+    expect(matchesTopScorerGuess("Harry Kane", actual)).toBe(false);
+  });
+
+  it("jogador diferente não colide (Dembelé)", () => {
+    expect(matchesTopScorerGuess("Dembelé", actual)).toBe(false);
+  });
+
+  it("palpite vazio nunca acerta", () => {
+    expect(matchesTopScorerGuess("", actual)).toBe(false);
+    expect(matchesTopScorerGuess("   ", actual)).toBe(false);
   });
 });

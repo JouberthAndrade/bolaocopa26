@@ -17,6 +17,7 @@
     "db:cleanup-demo": "tsx scripts/cleanup-demo.ts",
     "db:update-scoring": "tsx scripts/update-scoring-rules.ts",
     "db:set-bonus-deadline": "tsx scripts/set-bonus-deadline.ts",
+    "db:fix-topscorer-name": "tsx scripts/fix-topscorer-name.ts",
     "db:studio": "prisma studio",
     "sync:matches": "tsx scripts/sync-matches.ts",
     "seed:bots": "tsx scripts/seed-bots.ts"

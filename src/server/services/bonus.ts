@@ -1,7 +1,7 @@
 import type { BotKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { bonusDeadlineFor } from "@/lib/constants";
-import { resolveTournamentBonusWinners, normalizePlayerName } from "@/server/services/scoring";
+import { resolveTournamentBonusWinners, matchesTopScorerGuess } from "@/server/services/scoring";
 
 export type BonusKey = "champion" | "runnerUp" | "topScorer";
 
@@ -257,9 +257,7 @@ export async function getBonusResults(opts: {
   if (rule.topScorerBonus > 0) {
     const decided = !!winners?.topScorerName;
     const hit =
-      decided &&
-      !!bet.topScorerName &&
-      normalizePlayerName(bet.topScorerName) === normalizePlayerName(winners!.topScorerName!);
+      decided && !!bet.topScorerName && matchesTopScorerGuess(bet.topScorerName, winners!.topScorerName!);
     items.push({
       key: "topScorer",
       label: "Artilheiro",
