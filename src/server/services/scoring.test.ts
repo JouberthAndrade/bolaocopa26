@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeBetPoints } from "./scoring";
+import { computeBetPoints, resolveFinalWinner, normalizePlayerName } from "./scoring";
 
 // Regra padrão do bolão (ScoringRule): resultado=2 (vitória ou empate),
 // bônus placar exato=+1 → placar exato vale 3.
@@ -115,5 +115,78 @@ describe("computeBetPoints — bônus de pênaltis (mata-mata)", () => {
 
   it("sem o 4º parâmetro, comportamento antigo é preservado (placar exato no empate)", () => {
     expect(computeBetPoints(rule, { home: 1, away: 1 }, { home: 1, away: 1 })).toBe(3);
+  });
+});
+
+describe("resolveFinalWinner — bônus campeão/vice a partir da Final", () => {
+  it("mandante vence no tempo normal → mandante é campeão", () => {
+    expect(
+      resolveFinalWinner({
+        homeTeamId: "esp",
+        awayTeamId: "arg",
+        homeScore: 2,
+        awayScore: 1,
+        penaltyWinner: null,
+      }),
+    ).toEqual({ championTeamId: "esp", runnerUpTeamId: "arg" });
+  });
+
+  it("visitante vence no tempo normal → visitante é campeão", () => {
+    expect(
+      resolveFinalWinner({
+        homeTeamId: "esp",
+        awayTeamId: "arg",
+        homeScore: 0,
+        awayScore: 1,
+        penaltyWinner: null,
+      }),
+    ).toEqual({ championTeamId: "arg", runnerUpTeamId: "esp" });
+  });
+
+  it("empate decidido nos pênaltis para o mandante → mandante é campeão", () => {
+    expect(
+      resolveFinalWinner({
+        homeTeamId: "esp",
+        awayTeamId: "arg",
+        homeScore: 1,
+        awayScore: 1,
+        penaltyWinner: "HOME",
+      }),
+    ).toEqual({ championTeamId: "esp", runnerUpTeamId: "arg" });
+  });
+
+  it("empate decidido nos pênaltis para o visitante → visitante é campeão", () => {
+    expect(
+      resolveFinalWinner({
+        homeTeamId: "esp",
+        awayTeamId: "arg",
+        homeScore: 0,
+        awayScore: 0,
+        penaltyWinner: "AWAY",
+      }),
+    ).toEqual({ championTeamId: "arg", runnerUpTeamId: "esp" });
+  });
+
+  it("empate sem pênaltis registrados ainda → null (aguarda próximo tick)", () => {
+    expect(
+      resolveFinalWinner({
+        homeTeamId: "esp",
+        awayTeamId: "arg",
+        homeScore: 1,
+        awayScore: 1,
+        penaltyWinner: null,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("normalizePlayerName — comparação do palpite de artilheiro", () => {
+  it("ignora caixa, acentos e espaços nas pontas", () => {
+    expect(normalizePlayerName("  Kylian Mbappé  ")).toBe(normalizePlayerName("kylian mbappe"));
+    expect(normalizePlayerName("LAMINE YAMAL")).toBe(normalizePlayerName("Lamine Yamal"));
+  });
+
+  it("nomes diferentes não colidem", () => {
+    expect(normalizePlayerName("Mbappé")).not.toBe(normalizePlayerName("Messi"));
   });
 });

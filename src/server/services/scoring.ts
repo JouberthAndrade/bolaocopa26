@@ -114,7 +114,180 @@ export async function scoreFinishedMatches() {
     await recalcPoolStandings(poolId);
   }
 
-  return { scoredMatches, affectedPools: affectedPools.size };
+  // Assim que a Final estiver finalizada, julga os bônus de campeão/vice/artilheiro
+  // e já reflete no ranking (recalcPoolStandings próprio, idempotente).
+  const bonus = await scoreChampionBonuses();
+
+  return {
+    scoredMatches,
+    affectedPools: affectedPools.size,
+    bonus,
+  };
+}
+
+export function normalizePlayerName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+interface TournamentBonusWinners {
+  championTeamId: string;
+  runnerUpTeamId: string;
+  topScorerName: string | null;
+}
+
+export interface FinalMatchResult {
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number;
+  awayScore: number;
+  penaltyWinner: Advance | null;
+}
+
+/**
+ * Decide campeão/vice a partir do placar da Final — ou, em caso de empate, do
+ * vencedor do shootout (penaltyWinner). Retorna null enquanto o empate ainda
+ * não tiver pênaltis registrados (jogo aguardando o próximo tick do sync).
+ * Função pura — fácil de testar (ver computeBetPoints acima).
+ */
+export function resolveFinalWinner(
+  final: FinalMatchResult,
+): { championTeamId: string; runnerUpTeamId: string } | null {
+  if (final.homeScore > final.awayScore) {
+    return { championTeamId: final.homeTeamId, runnerUpTeamId: final.awayTeamId };
+  }
+  if (final.awayScore > final.homeScore) {
+    return { championTeamId: final.awayTeamId, runnerUpTeamId: final.homeTeamId };
+  }
+  if (final.penaltyWinner === "HOME") {
+    return { championTeamId: final.homeTeamId, runnerUpTeamId: final.awayTeamId };
+  }
+  if (final.penaltyWinner === "AWAY") {
+    return { championTeamId: final.awayTeamId, runnerUpTeamId: final.homeTeamId };
+  }
+  return null;
+}
+
+/**
+ * Descobre campeão/vice a partir do jogo da Final já finalizado e o
+ * artilheiro real (posição 1 da tabela TopScorer, sincronizada via
+ * football-data.org). Retorna null enquanto a Final não estiver decidida
+ * (inclusive empate sem pênaltis registrados ainda).
+ */
+async function resolveTournamentBonusWinners(
+  tournamentId: string,
+): Promise<TournamentBonusWinners | null> {
+  const final = await db.match.findFirst({
+    where: {
+      tournamentId,
+      stage: "FINAL",
+      status: "FINISHED",
+      resultConfirmed: true,
+      homeScore: { not: null },
+      awayScore: { not: null },
+    },
+    select: {
+      homeTeamId: true,
+      awayTeamId: true,
+      homeScore: true,
+      awayScore: true,
+      penaltyWinner: true,
+    },
+  });
+  if (!final) return null;
+
+  const winner = resolveFinalWinner({
+    homeTeamId: final.homeTeamId,
+    awayTeamId: final.awayTeamId,
+    homeScore: final.homeScore!,
+    awayScore: final.awayScore!,
+    penaltyWinner: final.penaltyWinner,
+  });
+  if (!winner) return null;
+  const { championTeamId, runnerUpTeamId } = winner;
+
+  const topScorer = await db.topScorer.findFirst({
+    where: { position: 1 },
+    select: { playerName: true },
+  });
+
+  return { championTeamId, runnerUpTeamId, topScorerName: topScorer?.playerName ?? null };
+}
+
+/**
+ * Julga os palpites-bônus (campeão/vice/artilheiro) de todos os bolões cujo
+ * torneio já teve a Final decidida. Idempotente: só grava quando os pontos
+ * calculados mudam, e recalcula o totalPoints dos bolões afetados.
+ */
+export async function scoreChampionBonuses() {
+  const tournaments = await db.tournament.findMany({
+    where: { matches: { some: { stage: "FINAL", status: "FINISHED", resultConfirmed: true } } },
+    select: { id: true },
+  });
+
+  let updatedBets = 0;
+  const affectedPools = new Set<string>();
+
+  for (const t of tournaments) {
+    const winners = await resolveTournamentBonusWinners(t.id);
+    if (!winners) continue;
+
+    const pools = await db.pool.findMany({
+      where: { tournamentId: t.id },
+      select: {
+        id: true,
+        scoringRule: {
+          select: { championBonus: true, runnerUpBonus: true, topScorerBonus: true },
+        },
+        championBets: {
+          select: {
+            id: true,
+            champTeamId: true,
+            runnerUpTeamId: true,
+            topScorerName: true,
+            pointsEarned: true,
+          },
+        },
+      },
+    });
+
+    for (const pool of pools) {
+      const rule = pool.scoringRule;
+      if (!rule) continue;
+
+      for (const bet of pool.championBets) {
+        let points = 0;
+        if (bet.champTeamId && bet.champTeamId === winners.championTeamId) {
+          points += rule.championBonus;
+        }
+        if (bet.runnerUpTeamId && bet.runnerUpTeamId === winners.runnerUpTeamId) {
+          points += rule.runnerUpBonus;
+        }
+        if (
+          winners.topScorerName &&
+          bet.topScorerName &&
+          normalizePlayerName(bet.topScorerName) === normalizePlayerName(winners.topScorerName)
+        ) {
+          points += rule.topScorerBonus;
+        }
+
+        if (points !== bet.pointsEarned) {
+          await db.championBet.update({ where: { id: bet.id }, data: { pointsEarned: points } });
+          updatedBets++;
+        }
+      }
+      affectedPools.add(pool.id);
+    }
+  }
+
+  for (const poolId of affectedPools) {
+    await recalcPoolStandings(poolId);
+  }
+
+  return { updatedBets, affectedPools: affectedPools.size };
 }
 
 /**
