@@ -130,10 +130,55 @@ export function normalizePlayerName(name: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
-interface TournamentBonusWinners {
+/** Dist\u00e2ncia de Levenshtein \u2014 n\u00ba m\u00ednimo de edi\u00e7\u00f5es para transformar a em b. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  let prevRow = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      row[j] =
+        a[i - 1] === b[j - 1]
+          ? prevRow[j - 1]
+          : 1 + Math.min(prevRow[j - 1], prevRow[j], row[j - 1]);
+    }
+    prevRow = row;
+  }
+  return prevRow[b.length];
+}
+
+/**
+ * Compara o palpite de artilheiro (texto livre) com o nome real do artilheiro
+ * do torneio, tolerando as varia\u00e7\u00f5es mais comuns:
+ * - s\u00f3 o sobrenome (ex.: "Mbapp\u00e9" em vez de "Kylian Mbapp\u00e9");
+ * - acentos/caixa diferentes (j\u00e1 cobertos por normalizePlayerName);
+ * - pequenos erros de digita\u00e7\u00e3o (ex.: "Mbapee"), via dist\u00e2ncia de Levenshtein.
+ */
+export function matchesTopScorerGuess(guess: string, actualFullName: string): boolean {
+  const normGuess = normalizePlayerName(guess);
+  const normActual = normalizePlayerName(actualFullName);
+  if (!normGuess || !normActual) return false;
+  if (normGuess === normActual) return true;
+
+  const actualSurname = normActual.split(" ").at(-1) ?? normActual;
+  if (normGuess === actualSurname) return true;
+
+  // Toler\u00e2ncia a erro de digita\u00e7\u00e3o: maior para nomes mais longos.
+  const maxDistance = (name: string) => (name.length <= 5 ? 1 : name.length <= 9 ? 2 : 3);
+  return (
+    levenshtein(normGuess, actualSurname) <= maxDistance(actualSurname) ||
+    levenshtein(normGuess, normActual) <= maxDistance(normActual)
+  );
+}
+
+export interface TournamentBonusWinners {
   championTeamId: string;
   runnerUpTeamId: string;
   topScorerName: string | null;
@@ -177,7 +222,7 @@ export function resolveFinalWinner(
  * football-data.org). Retorna null enquanto a Final não estiver decidida
  * (inclusive empate sem pênaltis registrados ainda).
  */
-async function resolveTournamentBonusWinners(
+export async function resolveTournamentBonusWinners(
   tournamentId: string,
 ): Promise<TournamentBonusWinners | null> {
   const final = await db.match.findFirst({
@@ -269,7 +314,7 @@ export async function scoreChampionBonuses() {
         if (
           winners.topScorerName &&
           bet.topScorerName &&
-          normalizePlayerName(bet.topScorerName) === normalizePlayerName(winners.topScorerName)
+          matchesTopScorerGuess(bet.topScorerName, winners.topScorerName)
         ) {
           points += rule.topScorerBonus;
         }
