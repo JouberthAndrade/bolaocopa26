@@ -133,7 +133,7 @@ export function normalizePlayerName(name: string): string {
     .toLowerCase();
 }
 
-interface TournamentBonusWinners {
+export interface TournamentBonusWinners {
   championTeamId: string;
   runnerUpTeamId: string;
   topScorerName: string | null;
@@ -177,7 +177,7 @@ export function resolveFinalWinner(
  * football-data.org). Retorna null enquanto a Final não estiver decidida
  * (inclusive empate sem pênaltis registrados ainda).
  */
-async function resolveTournamentBonusWinners(
+export async function resolveTournamentBonusWinners(
   tournamentId: string,
 ): Promise<TournamentBonusWinners | null> {
   const final = await db.match.findFirst({

@@ -6,6 +6,7 @@ import { requireUserId, requireMembership } from "@/server/guards";
 import { isBetClosed, isKnockoutDraw } from "@/lib/bet-gate";
 import { betSchema, championBetSchema } from "@/lib/validations";
 import { bonusDeadlineFor } from "@/lib/constants";
+import { getBonusResults, type BonusResults } from "@/server/services/bonus";
 
 type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -104,58 +105,71 @@ export interface UserBetRow {
   scored: boolean;
 }
 
+export interface UserBetsInPool {
+  bets: UserBetRow[];
+  /** Conferência dos palpites-bônus (campeão/vice/artilheiro), null se o bolão não tem. */
+  bonus: BonusResults | null;
+}
+
 /**
- * Retorna os palpites fechados de qualquer membro do bolão.
+ * Retorna os palpites fechados de qualquer membro do bolão, junto com a
+ * conferência dos palpites-bônus (campeão/vice/artilheiro).
  * Requer que o caller seja membro do mesmo bolão.
  */
 export async function getUserBetsInPool(
   targetUserId: string,
   poolId: string,
-): Promise<ActionResult<UserBetRow[]>> {
+): Promise<ActionResult<UserBetsInPool>> {
   if (!targetUserId || !poolId) return { ok: false, error: "Parâmetros inválidos" };
   const callerId = await requireUserId();
   await requireMembership(poolId, callerId);
 
-  const bets = await db.bet.findMany({
-    where: {
-      userId: targetUserId,
-      poolId,
-      match: { status: "FINISHED" },
-    },
-    orderBy: { match: { kickoffAt: "desc" } },
-    select: {
-      homeGuess: true,
-      awayGuess: true,
-      pointsEarned: true,
-      match: {
-        select: {
-          id: true,
-          kickoffAt: true,
-          homeScore: true,
-          awayScore: true,
-          scored: true,
-          homeTeam: { select: { name: true, countryCode: true } },
-          awayTeam: { select: { name: true, countryCode: true } },
+  const [bets, bonus] = await Promise.all([
+    db.bet.findMany({
+      where: {
+        userId: targetUserId,
+        poolId,
+        match: { status: "FINISHED" },
+      },
+      orderBy: { match: { kickoffAt: "desc" } },
+      select: {
+        homeGuess: true,
+        awayGuess: true,
+        pointsEarned: true,
+        match: {
+          select: {
+            id: true,
+            kickoffAt: true,
+            homeScore: true,
+            awayScore: true,
+            scored: true,
+            homeTeam: { select: { name: true, countryCode: true } },
+            awayTeam: { select: { name: true, countryCode: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    getBonusResults({ userId: targetUserId, poolId }),
+  ]);
 
   return {
     ok: true,
-    data: bets.map((b) => ({
-      matchId: b.match.id,
-      kickoffAt: b.match.kickoffAt,
-      homeName: b.match.homeTeam.name,
-      homeCode: b.match.homeTeam.countryCode,
-      awayName: b.match.awayTeam.name,
-      awayCode: b.match.awayTeam.countryCode,
-      homeScore: b.match.homeScore,
-      awayScore: b.match.awayScore,
-      homeGuess: b.homeGuess,
-      awayGuess: b.awayGuess,
-      pointsEarned: b.pointsEarned,
-      scored: b.match.scored,
-    })),
+    data: {
+      bets: bets.map((b) => ({
+        matchId: b.match.id,
+        kickoffAt: b.match.kickoffAt,
+        homeName: b.match.homeTeam.name,
+        homeCode: b.match.homeTeam.countryCode,
+        awayName: b.match.awayTeam.name,
+        awayCode: b.match.awayTeam.countryCode,
+        homeScore: b.match.homeScore,
+        awayScore: b.match.awayScore,
+        homeGuess: b.homeGuess,
+        awayGuess: b.awayGuess,
+        pointsEarned: b.pointsEarned,
+        scored: b.match.scored,
+      })),
+      bonus,
+    },
   };
 }

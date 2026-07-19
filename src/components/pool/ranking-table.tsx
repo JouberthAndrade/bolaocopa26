@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Flag } from "@/components/flag";
 import { getUserBetsInPool, type UserBetRow } from "@/server/actions/bets";
 import type { RankingRow } from "@/server/services/ranking";
+import type { BonusResults } from "@/server/services/bonus";
 
 const MEDAL_COLOR: Record<number, string> = {
   1: "bg-yellow-400/15 text-yellow-400 border-yellow-400/30",
@@ -35,6 +36,7 @@ export function RankingTable({
 }) {
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
   const [bets, setBets] = useState<UserBetRow[] | null>(null);
+  const [bonus, setBonus] = useState<BonusResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reduce = useReducedMotion();
@@ -43,12 +45,14 @@ export function RankingTable({
     async (user: SelectedUser) => {
       setSelectedUser(user);
       setBets(null);
+      setBonus(null);
       setError(null);
       setLoading(true);
       const result = await getUserBetsInPool(user.userId, poolId);
       setLoading(false);
       if (result.ok) {
-        setBets(result.data);
+        setBets(result.data.bets);
+        setBonus(result.data.bonus);
       } else {
         setError(result.error);
       }
@@ -59,6 +63,7 @@ export function RankingTable({
   const handleClose = useCallback(() => {
     setSelectedUser(null);
     setBets(null);
+    setBonus(null);
     setError(null);
   }, []);
 
@@ -210,16 +215,54 @@ export function RankingTable({
           </div>
         )}
 
-        {!loading && !error && bets?.length === 0 && (
+        {!loading && !error && bets?.length === 0 && !bonus && (
           <p className="text-center text-sm text-muted-foreground">
             Nenhum jogo finalizado com palpite ainda.
           </p>
         )}
 
+        {!loading && !error && bonus && bonus.items.length > 0 && (
+          <div className="mb-3 space-y-2 rounded-lg border border-border bg-secondary/20 p-3">
+            <p className="text-xs font-semibold text-muted-foreground">Bônus (campeão/vice/artilheiro)</p>
+            <div className="space-y-1.5">
+              {bonus.items.map((item) => (
+                <div key={item.key} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium">{item.label}: </span>
+                    <span className="text-muted-foreground">
+                      {item.guess ?? "sem palpite"}
+                      {item.decided && (
+                        <span> · real: {item.actual ?? "—"}</span>
+                      )}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 text-xs font-semibold",
+                      !item.decided
+                        ? "text-muted-foreground"
+                        : item.points > 0
+                          ? "text-green-400"
+                          : "text-muted-foreground",
+                    )}
+                  >
+                    {item.decided ? `${item.points} pts` : "aguardando"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+              <span>Total de bônus</span>
+              <span className="font-bold text-foreground">{bonus.totalPoints} pts</span>
+            </div>
+          </div>
+        )}
+
         {!loading && !error && bets && bets.length > 0 && (() => {
           // Jogos encerrados mas ainda sem pontuação consolidada não contam como
           // acerto nem erro (a action só retorna jogos FINISHED → !scored = aguardando).
-          const totalPoints = bets.reduce((sum, b) => sum + (b.pointsEarned ?? 0), 0);
+          const totalPoints =
+            bets.reduce((sum, b) => sum + (b.pointsEarned ?? 0), 0) + (bonus?.totalPoints ?? 0);
           const hits = bets.filter((b) => b.scored && (b.pointsEarned ?? 0) > 0).length;
           const misses = bets.filter((b) => b.scored && (b.pointsEarned ?? 0) === 0).length;
           return (

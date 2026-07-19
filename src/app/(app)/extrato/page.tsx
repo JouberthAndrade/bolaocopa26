@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { requireUserId } from "@/server/guards";
 import { getUserPools, getAllMatchesWithBets } from "@/server/services/matches";
+import { getBonusResults } from "@/server/services/bonus";
 import { classifyBet } from "@/lib/bet-result";
+import { cn } from "@/lib/utils";
 import { MatchCard } from "@/components/match/match-card";
 import { PoolSelector } from "@/components/pool/pool-selector";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,13 +42,16 @@ export default async function ExtratoPage({
   }
 
   const selected = pools.find((p) => p.slug === poolSlug) ?? pools[0];
-  const matches = await getAllMatchesWithBets({ userId, poolId: selected.id });
+  const [matches, bonus] = await Promise.all([
+    getAllMatchesWithBets({ userId, poolId: selected.id }),
+    getBonusResults({ userId, poolId: selected.id }),
+  ]);
 
   // Só os jogos que o jogador palpitou.
   const betted = matches.filter((m) => m.bet);
 
   // Resumo do extrato: pontos e contagem por tipo de acerto.
-  let totalPoints = 0;
+  let totalPoints = bonus?.totalPoints ?? 0;
   let exact = 0;
   let result = 0;
   let miss = 0;
@@ -82,7 +87,7 @@ export default async function ExtratoPage({
         <PoolSelector pools={pools} current={selected.slug} basePath="/extrato" />
       </div>
 
-      {betted.length === 0 ? (
+      {betted.length === 0 && !bonus ? (
         <Card>
           <CardContent className="space-y-3 py-10 text-center text-sm text-muted-foreground">
             <Receipt className="mx-auto h-8 w-8" />
@@ -102,6 +107,44 @@ export default async function ExtratoPage({
             <SummaryStat label="Não pontuou" value={miss} />
             <SummaryStat label="Aguardando" value={pending} />
           </div>
+
+          {bonus && bonus.items.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                Bônus (campeão/vice/artilheiro)
+              </h2>
+              <Card>
+                <CardContent className="space-y-2 py-4">
+                  {bonus.items.map((item) => (
+                    <div
+                      key={item.key}
+                      className="flex items-center justify-between gap-2 border-b border-border py-1.5 text-sm last:border-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium">{item.label}: </span>
+                        <span className="text-muted-foreground">
+                          {item.guess ?? "sem palpite"}
+                          {item.decided && <span> · real: {item.actual ?? "—"}</span>}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 text-xs font-semibold",
+                          !item.decided
+                            ? "text-muted-foreground"
+                            : item.points > 0
+                              ? "text-green-400"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        {item.decided ? `${item.points} pts` : "aguardando"}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
           {played.length > 0 && (
             <section className="space-y-3">
